@@ -2,6 +2,7 @@
 //
 
 #include <iostream>
+#include <string>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 
@@ -15,18 +16,23 @@ int main()
     cout << "Hello World!\n";
 
     RenderWindow window{ VideoMode{1000,1000}, "Projekt informatyka" };
-    Event event;
-    while (true)
-    {
-        window.clear(Color::Black);
-        window.pollEvent(event);
+    
+    CircleShape triangle(80, 3);
+    triangle.setPosition(100, 100);
+    triangle.setFillColor(Color(0, 255, 255, 200));
 
-        if (event.type == Event::Closed)
+    while (window.isOpen())
+    {
+        Event event;
+        while (window.pollEvent(event))
         {
-            window.close();
-            break;
+            if (event.type == Event::Closed)
+                window.close();
         }
 
+
+        window.clear();
+        window.draw(triangle);
         window.display();
     }
 
