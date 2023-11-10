@@ -1,4 +1,4 @@
-﻿// projekt_informatyka_2023_24.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// mian.cpp
 //
 // AquaPark simulator
 
@@ -7,6 +7,7 @@
 #include <SFML/Graphics.hpp>
 //#include <SFML/Window.hpp>
 #include <SFML/System/Clock.hpp>
+#include <list>
 
 
 using namespace std;
@@ -154,10 +155,214 @@ private:
 };
 
 
-class Options
-{
-    //tu opcje
+class InputData {
+public:
+    InputData()
+    {
+        // Default values
+        labelText = "Witam";
+        value = 20;
+        position = Vector2f(10.0f, 10.0f);
+
+        initializeElements();
+    }
+
+    InputData(const string& labelText, int defaultValue, const Vector2f& position)
+        : labelText(labelText), value(defaultValue), position(position) {
+        initializeElements();
+    }
+
+
+    void draw(RenderWindow& window) {
+        window.draw(label);
+        window.draw(valueText);
+        window.draw(incrementButton);
+        window.draw(decrementButton);
+    }
+
+    void handleButtonClick(const Vector2f& mousePos) {
+        if (incrementButton.getGlobalBounds().contains(mousePos)) {
+            increaseValue();
+        }
+        else if (decrementButton.getGlobalBounds().contains(mousePos)) {
+            decreaseValue();
+        }
+    }
+
+private:
+    string labelText;
+    int value;
+    Vector2f position;
+    Font font;
+    Text label;
+    Text valueText;
+    Text incrementButton;
+    Text decrementButton;
+
+    void initializeElements() {
+        font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf");
+
+        label.setFont(font);
+        label.setCharacterSize(24);
+        label.setPosition(position.x, position.y);
+        label.setString(labelText);
+
+        valueText.setFont(font);
+        valueText.setCharacterSize(24);
+        updateValueText();
+        valueText.setPosition(position.x + 400, position.y);
+
+        incrementButton.setFont(font);
+        incrementButton.setCharacterSize(20);
+        incrementButton.setString("Up");
+        incrementButton.setPosition(position.x + 500, position.y);
+
+        decrementButton.setFont(font);
+        decrementButton.setCharacterSize(20);
+        decrementButton.setString("Down");
+        decrementButton.setPosition(position.x + 600, position.y);
+    }
+
+    void increaseValue() {
+        value++;
+        updateValueText();
+    }
+
+    void decreaseValue() {
+        value--;
+        updateValueText();
+    }
+
+    void updateValueText() {
+        valueText.setString(to_string(value));
+    }
 };
+
+class Options {
+public:
+    Options(RenderWindow& window) : window(window), 
+
+        // Pool 1
+        waterLevelInput1("Poziom wody w basenie 1", 20, Vector2f(50, 150)),
+        temperatureInput1("Temperatura wody w basenie 1", 20, Vector2f(50, 200)),
+
+        // Pool 2
+        waterLevelInput2("Poziom wody w basenie 2", 20, Vector2f(50, 300)),
+        temperatureInput2("Temperatura wody w basenie 2", 20, Vector2f(50, 350)),
+
+        // Pool 3
+        waterLevelInput3("Poziom wody w basenie 3", 20, Vector2f(50, 450)),
+        temperatureInput3("Temperatura wody w basenie 3", 20, Vector2f(50, 500)),
+
+        // Pool 4
+        waterLevelInput4("Poziom wody w basenie 4", 20, Vector2f(50, 600)),
+        temperatureInput4("Temperatura wody w basenie 4", 20, Vector2f(50, 650))
+    
+    {
+        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
+            cerr << "Error loading font" << endl;
+        }
+
+        if (!background.loadFromFile("resources/Images/MenuBG.jpg")) {
+            cerr << "Error loading Menu Background" << endl;
+        }
+
+        backgroundSprite.setTexture(background);
+        backgroundSprite.setScale(
+            static_cast<float>(window.getSize().x) / backgroundSprite.getTexture()->getSize().x,
+            static_cast<float>(window.getSize().y) / backgroundSprite.getTexture()->getSize().y
+        );
+
+        backgroundRect.setSize(Vector2f(1280.0f, 720.0f));
+        backgroundRect.setFillColor(Color(0, 0, 0, 128));
+        backgroundRect.setPosition(0.0f, 0.0f);
+
+        
+
+        // Save button
+        saveButton.setFont(font);
+        saveButton.setCharacterSize(36);
+        saveButton.setString("Zapisz");
+        saveButton.setPosition(300.0, 75.0);
+    }
+
+    void run() {
+        while (window.isOpen()) {
+            Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == Event::Closed) {
+                    window.close();
+                }
+                else if (event.type == Event::MouseButtonReleased) {
+                    handleButtonClick(event);
+                }
+            }
+
+            window.clear();
+
+            window.draw(backgroundSprite);
+            window.draw(backgroundRect);
+
+            waterLevelInput1.draw(window);
+            temperatureInput1.draw(window);
+            waterLevelInput2.draw(window);
+            temperatureInput2.draw(window);
+            waterLevelInput3.draw(window);
+            temperatureInput3.draw(window);
+            waterLevelInput4.draw(window);
+            temperatureInput4.draw(window);
+
+            window.draw(saveButton);
+
+            window.display();
+        }
+    }
+
+private:
+    RenderWindow& window;
+    Font font;
+    Texture background;
+    Sprite backgroundSprite;
+    RectangleShape backgroundRect;
+
+    
+
+    InputData waterLevelInput1;
+    InputData temperatureInput1;
+    InputData waterLevelInput2;
+    InputData temperatureInput2;
+    InputData waterLevelInput3;
+    InputData temperatureInput3;
+    InputData waterLevelInput4;
+    InputData temperatureInput4;
+
+    Text saveButton;
+
+    void handleButtonClick(const Event& event) {
+        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+
+        waterLevelInput1.handleButtonClick(mousePos);
+        temperatureInput1.handleButtonClick(mousePos);
+        waterLevelInput2.handleButtonClick(mousePos);
+        temperatureInput2.handleButtonClick(mousePos);
+        waterLevelInput3.handleButtonClick(mousePos);
+        temperatureInput3.handleButtonClick(mousePos);
+        waterLevelInput4.handleButtonClick(mousePos);
+        temperatureInput4.handleButtonClick(mousePos);
+
+        if (saveButton.getGlobalBounds().contains(mousePos)) {
+            saveOptions();
+        }
+    }
+
+    void saveOptions() {
+        // Tu będzie funkcja zapisywania wszystkich wartości do listy
+    }
+};
+
+   
+
+
 
 
 class Menu {
@@ -225,6 +430,7 @@ public:
                         }
                         else if (optionsButton.getGlobalBounds().contains(mousePos)) {
                             cout << "Przycisk opcje" << endl;
+                            startOptions();
                             
                         }
                         else if (exitOption.getGlobalBounds().contains(mousePos)) {
@@ -262,10 +468,18 @@ private:
     void startSimulation() {
         // czysc menu
         window.clear();
-        window.display();
+        //window.display();
 
         Simulation simulation(window);
         simulation.run(); // start symulacji
+    }
+
+    void startOptions() {
+        window.clear();
+        //window.display();
+
+        Options options(window);
+        options.run(); // start opcje
     }
 };
 
