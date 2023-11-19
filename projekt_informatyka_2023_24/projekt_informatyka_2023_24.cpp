@@ -1,11 +1,8 @@
-﻿// mian.cpp
-//
-// AquaPark simulator
+﻿// AquaPark simulator
 
 #include <iostream>
 #include <string>
 #include <SFML/Graphics.hpp>
-//#include <SFML/Window.hpp>
 #include <SFML/System/Clock.hpp>
 #include <list>
 
@@ -16,10 +13,16 @@ using namespace sf;
 
 class WaterPipe
 {
-    //puste
+public:
+    WaterPipe()
+    {
+
+    }
+
+
+private:
+
 };
-
-
 
 class Tank {
 public:
@@ -91,32 +94,56 @@ private:
     }
 };
 
-
-
-
-class Simulation {
+class ParametersTable {
 public:
-    Simulation(RenderWindow& window) : window(window), tank1(Vector2f(200.0f, 100.0f), Vector2f(150.0f, 300.0f), 0.1f)
-     {
-     
-        backgroundColor = Color::Blue;
+    ParametersTable(RenderWindow& window, const vector<pair<string, int>>& parameters, const Vector2f& position)
+        : window(window), parameters(parameters), position(position) {
+        initializeElements();
+    }
 
-        // Font
+    void draw() {
+        for (size_t i = 0; i < parameters.size(); ++i) {
+            const auto& parameter = parameters[i];
+            drawParameter(parameter.first, parameter.second, i);
+        }
+    }
+
+private:
+    RenderWindow& window;
+    Font font;
+    vector<pair<string, int>> parameters;
+    Vector2f position;
+    int characterSize = 16;  // Rozmiar font
+    Color backgroundColor = Color(192, 192, 192, 200);  // kolor
+
+    void initializeElements() {
         if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
             cerr << "Error loading font" << endl;
         }
+    }
 
-        // test
-        text.setFont(font);
-        text.setCharacterSize(36);
-        text.setString("Simulation test test");
-        text.setFillColor(Color::White);
+    void drawParameter(const string& labelText, int value, size_t index) {
+        RectangleShape backgroundRect(Vector2f(300.0f, 40.0f));  // rozmiar pola
+        backgroundRect.setFillColor(backgroundColor);
+        backgroundRect.setPosition(position.x, position.y + index * 50.0f);
 
-        // Tekst w srodku
-        FloatRect textBounds = text.getLocalBounds();
-        text.setOrigin(textBounds.left + textBounds.width / 2.0f, textBounds.top + textBounds.height / 2.0f);
-        text.setPosition(window.getSize().x / 2.0f, window.getSize().y / 2.0f);
+        Text parameterText;
+        parameterText.setFont(font);
+        parameterText.setCharacterSize(characterSize);
+        parameterText.setPosition(position.x + 5.0f, position.y + index * 50.0f + 5.0f);
+        parameterText.setString(labelText + ": " + to_string(value));
 
+        window.draw(backgroundRect);
+        window.draw(parameterText);
+    }
+};
+
+class Simulation {
+public:
+    Simulation(RenderWindow& window, const vector<pair<string, int>>& parameters)
+        : window(window), tank1(Vector2f(800.0f, 300.0f), Vector2f(150.0f, 300.0f), 0.1f), parameters(parameters),
+        backgroundColor(Color::Blue), font(), TitleText(), parametersTable(window, parameters, Vector2f(10.0f, 10.0f)) {
+        initializeElements();
     }
 
     void run() {
@@ -126,21 +153,21 @@ public:
                 if (event.type == Event::Closed) {
                     window.close();
                 }
-                
             }
 
-            Clock clock; // zegar init
+            Clock clock;
             float elapsedTime = clock.restart().asSeconds();
 
             tank1.updateWaterAnimation(elapsedTime);
 
-            // Update, render
-            window.clear(backgroundColor); 
-            
-            tank1.draw(window); //zbiornik 1
+            window.clear(backgroundColor);
 
-            window.draw(text); 
-            window.display(); // Symulacja
+            tank1.draw(window);
+            drawParametersTable();
+
+            window.draw(TitleText);
+
+            window.display();
         }
     }
 
@@ -148,10 +175,26 @@ private:
     RenderWindow& window;
     Color backgroundColor;
     Font font;
-    Text text;
+    Text TitleText;
     Tank tank1;
-    Clock clock;
+    vector<pair<string, int>> parameters;
+    ParametersTable parametersTable;
 
+    void initializeElements() {
+        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
+            cerr << "Error loading font" << endl;
+        }
+
+        TitleText.setFont(font);
+        TitleText.setCharacterSize(24);
+        TitleText.setFillColor(Color::White);
+        TitleText.setPosition(640.0f, 10.0f);
+        TitleText.setString("Symualcja");
+    }
+
+    void drawParametersTable() {
+        parametersTable.draw();
+    }
 };
 
 
@@ -160,7 +203,7 @@ public:
     InputData()
     {
         // Default values
-        labelText = "Witam";
+        labelText = "---";
         value = 20;
         position = Vector2f(10.0f, 10.0f);
 
@@ -187,6 +230,10 @@ public:
         else if (decrementButton.getGlobalBounds().contains(mousePos)) {
             decreaseValue();
         }
+    }
+
+    int getValue() const {
+        return value;
     }
 
 private:
@@ -282,7 +329,7 @@ public:
         // Save button
         saveButton.setFont(font);
         saveButton.setCharacterSize(36);
-        saveButton.setString("Zapisz");
+        saveButton.setString("Rozpocznij symulacje");
         saveButton.setPosition(300.0, 75.0);
     }
 
@@ -318,6 +365,11 @@ public:
         }
     }
 
+    // Add a method to get entered values
+    vector<pair<string, int>> getEnteredValues() const {
+        return enteredValues;
+    }
+
 private:
     RenderWindow& window;
     Font font;
@@ -325,7 +377,7 @@ private:
     Sprite backgroundSprite;
     RectangleShape backgroundRect;
 
-    
+    vector<pair<string, int>> enteredValues; // Store entered values and their labels
 
     InputData waterLevelInput1;
     InputData temperatureInput1;
@@ -337,6 +389,8 @@ private:
     InputData temperatureInput4;
 
     Text saveButton;
+
+    int id = 0;
 
     void handleButtonClick(const Event& event) {
         Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
@@ -351,16 +405,47 @@ private:
         temperatureInput4.handleButtonClick(mousePos);
 
         if (saveButton.getGlobalBounds().contains(mousePos)) {
-            saveOptions();
+            vector<pair<string, int>> enteredValues = saveOptions();
+            startSimulation(window, enteredValues);
         }
     }
 
-    void saveOptions() {
-        // Tu będzie funkcja zapisywania wszystkich wartości do listy
+    vector<pair<string, int>> saveOptions() {
+        enteredValues.clear();
+
+        cout << "Zapis dane:" << id << endl;
+        // Save water level and temperature values for each pool
+        enteredValues.emplace_back("Poziom wody w basenie 1", waterLevelInput1.getValue());
+        enteredValues.emplace_back("Temperatura wody w basenie 1", temperatureInput1.getValue());
+
+        enteredValues.emplace_back("Poziom wody w basenie 2", waterLevelInput2.getValue());
+        enteredValues.emplace_back("Temperatura wody w basenie 2", temperatureInput2.getValue());
+
+        enteredValues.emplace_back("Poziom wody w basenie 3", waterLevelInput3.getValue());
+        enteredValues.emplace_back("Temperatura wody w basenie 3", temperatureInput3.getValue());
+
+        enteredValues.emplace_back("Poziom wody w basenie 4", waterLevelInput4.getValue());
+        enteredValues.emplace_back("Temperatura wody w basenie 4", temperatureInput4.getValue());
+
+        // Print the entered values to the console
+        for (const auto& entry : enteredValues) {
+            cout << entry.first << ": " << entry.second << endl;
+        }
+
+        id += 1;
+
+        return enteredValues;
+    }
+
+
+    void startSimulation(RenderWindow& window, const vector<pair<string, int>>& enteredValues) const {
+      
+        // Pass the entered values to the Simulation constructor
+        Simulation simulation(window, enteredValues);
+        simulation.run(); // start symulacji
     }
 };
 
-   
 
 
 
@@ -402,7 +487,7 @@ public:
         startButton.setCharacterSize(36);
         startButton.setPosition(50, 300);
 
-        optionsButton.setString("Opcje");
+        optionsButton.setString("Pomoc");
         optionsButton.setFont(font);
         optionsButton.setCharacterSize(36);
         optionsButton.setPosition(50, 350);
@@ -426,11 +511,12 @@ public:
 
                         if (startButton.getGlobalBounds().contains(mousePos)) {
                             cout << "Przycisk start" << endl;
-                            startSimulation();
+                            startOptions();
+                            
                         }
                         else if (optionsButton.getGlobalBounds().contains(mousePos)) {
-                            cout << "Przycisk opcje" << endl;
-                            startOptions();
+                            cout << "Tu będzie help" << endl;
+                            
                             
                         }
                         else if (exitOption.getGlobalBounds().contains(mousePos)) {
@@ -452,6 +538,8 @@ public:
         }
     }
 
+    
+
 private:
     RenderWindow& window;
     Font font;
@@ -465,24 +553,13 @@ private:
     Text exitOption;
 
 
-    void startSimulation() {
-        // czysc menu
-        window.clear();
-        //window.display();
-
-        Simulation simulation(window);
-        simulation.run(); // start symulacji
-    }
 
     void startOptions() {
         window.clear();
-        //window.display();
-
         Options options(window);
-        options.run(); // start opcje
+        options.run();
     }
 };
-
 
 
 
