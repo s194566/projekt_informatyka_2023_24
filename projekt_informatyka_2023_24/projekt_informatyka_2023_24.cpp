@@ -28,18 +28,8 @@ private:
 
 class Tank {
 public:
-    Tank() {
-        // Domyślne wartości
-        position = Vector2f(0.0f, 0.0f);
-        size = Vector2f(100.0f, 200.0f);
-        waterLevel = 0.5f; // 50%
-
-        // Inicjalizacja zbiornika
-        initializeShapes();
-    }
-
     Tank(Vector2f position, Vector2f size, float waterLevel) : position(position), size(size), waterLevel(waterLevel) {
-        initializeShapes();
+        init();
     }
 
     void draw(RenderWindow& window) {
@@ -49,14 +39,14 @@ public:
 
     void updateWaterAnimation(float elapsedTime) {
         // animacja param
-        static float waterSpeed = 50.0f; 
-        static float waterAmplitude = 30.0f; 
+        static float waterSpeed = 50.0f;
+        static float waterAmplitude = 30.0f;
 
-        
+
         float waterLevelChange = waterSpeed * elapsedTime;
         waterLevel += waterLevelChange;
 
-        
+
         if (waterLevel < 0.0f) {
             waterLevel = 0.0f;
             waterSpeed = -waterSpeed; //cofanie
@@ -81,107 +71,19 @@ private:
     RectangleShape tankShape;
     RectangleShape waterShape;
 
-    void initializeShapes() {
+    void init() {
         // Duzy kwadrat init
         tankShape.setSize(size);
         tankShape.setPosition(position);
-        tankShape.setFillColor(Color::Green); 
+        tankShape.setFillColor(Color::Green);
 
         // Oblicz pozycję i rozmiar
         float waterHeight = size.y * waterLevel;
         float waterPositionY = position.y + size.y - waterHeight;
-        waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 10.0f)); 
-        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f); 
+        waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 10.0f));
+        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
         waterShape.setFillColor(Color::Blue); //kolor wody
     }
-};
-
-class ParametersTable {
-
-};
-
-class Simulation {
-public:
-    Simulation(sf::RenderWindow& window, const std::array<int, 8>& enteredValues)
-        : window(window), enteredValues(enteredValues) {
-        init();
-    }
-
-    void run() {
-        while (window.isOpen()) {
-            Event event;
-            while (window.pollEvent(event)) {
-                if (event.type == Event::Closed) {
-                    window.close();
-                }
-                else if (event.type == Event::MouseButtonReleased) {
-                    handleButtonClick(event);
-                }
-            }
-
-            Clock clock;
-            float elapsedTime = clock.restart().asSeconds();
-
-            tank1.updateWaterAnimation(elapsedTime);
-
-            window.clear(backgroundColor);
-
-            tank1.draw(window);
-
-            window.draw(TitleText);
-            window.draw(backButton);
-
-            window.display();
-
-            if (simulationShouldClose) {
-                return; // wyjscie z run() i powrot do menu
-            }
-        }
-    }
-
-private:
-    RenderWindow& window;
-    Color backgroundColor;
-    Font font;
-    Text TitleText;
-    Text backButton;
-    Tank tank1;
-    array<int, 8> enteredValues;
-    ParametersTable parametersTable;
-
-    bool simulationShouldClose = false;
-
-    void init() {
-        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
-            cerr << "Error loading font" << endl;
-        }
-
-        backgroundColor = Color(0, 0, 255);
-
-        TitleText.setFont(font);
-        TitleText.setCharacterSize(24);
-        TitleText.setFillColor(Color::White);
-        TitleText.setPosition(640.0f, 10.0f);
-        TitleText.setString("Symulacja");
-
-        backButton.setFont(font);
-        backButton.setCharacterSize(24);
-        backButton.setString("cofnij");
-        backButton.setPosition(1150.0, 1.0);
-    }
-
-    void handleButtonClick(const Event& event) {
-        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
-
-
-        if (backButton.getGlobalBounds().contains(mousePos)) {
-            window.clear();
-            window.display();
-            simulationShouldClose = true;
-        }
-
-    }
-
 };
 
 
@@ -189,7 +91,6 @@ class InputData {
 public:
     InputData()
     {
-        // Default values
         labelText = "---";
         value = 20;
         position = Vector2f(10.0f, 10.0f);
@@ -276,6 +177,170 @@ private:
     }
 };
 
+class ParametersTable {
+public:
+    ParametersTable(const array<int, 8>& dynamicValues, const Vector2f& position, RenderWindow& window)
+        : dynamicValues(dynamicValues), position(position), window(window) {
+        init();
+    }
+
+    void draw() {
+        for (size_t i = 0; i < fixedLabels.size(); ++i) {
+            const string labelText = fixedLabels[i] + " ";
+            drawParameter(labelText, dynamicVal[i], i);
+        }
+    }
+
+private:
+    const array<int, 8>& dynamicValues; 
+    Vector2f position; 
+    Font font;
+    RenderWindow& window;
+
+    const array<int, 8> dynamicVal = { // tymczasowe
+        1,2,3,4,5,6,7,8
+    };
+
+
+    const array<string, 8> fixedLabels = {
+        "Poziom wody 1:",
+        "Temperatura wody 1:",
+        "Poziom wody 2:",
+        "Temperatura wody 2:",
+        "Poziom wody 3:",
+        "Temperatura wody 3:",
+        "Poziom wody 4:",
+        "Temperatura wody 4:"
+    };
+
+    void init() {
+        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
+            cerr << "Error loading font" << endl;
+        }
+    }
+
+    void drawParameter(const string& labelText, int value, size_t index) {
+        RectangleShape backgroundRect(Vector2f(300.0f, 40.0f)); // rozmiar pola
+        backgroundRect.setFillColor(Color(192, 192, 192, 200)); // kolor pola
+        backgroundRect.setPosition(position.x, position.y + index * 50.0f); // pozycja
+
+        Text parameterText;
+        parameterText.setFont(font);
+        parameterText.setCharacterSize(20); // font
+        parameterText.setPosition(position.x + 5.0f, position.y + index * 50.0f + 5.0f); 
+        parameterText.setString(labelText + to_string(value)); 
+
+        window.draw(backgroundRect);
+        window.draw(parameterText);
+    }
+};
+
+class Simulation {
+public:
+    Simulation(RenderWindow& window, const std::array<int, 8>& enteredValues)
+        : window(window),
+        enteredValues(enteredValues),
+        parametersTable(enteredValues, Vector2f(10.0f, 10.0f), window),
+        Base(Vector2f(200.0f, 650.0f), Vector2f(1000.0f, 50.0f), 1),
+        tank1(Vector2f(350.0f, 200.0f), Vector2f(100.0f, 250.0f), 0.5),
+        tank2(Vector2f(500.0f, 400.0f), Vector2f(200.0f, 100.0f), 0.5),
+        tank3(Vector2f(750.0f, 300.0f), Vector2f(200.0f, 200.0f), 0.5),
+        tank4(Vector2f(1000.0f, 200.0f), Vector2f(200.0f, 200.0f), 0.5)
+    {
+        init();
+    }
+
+    void run() {
+        while (window.isOpen()) {
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) {
+                    window.close();
+                }
+                else if (event.type == sf::Event::MouseButtonReleased) {
+                    handleButtonClick(event);
+                }
+            }
+
+            Clock clock;
+            float elapsedTime = clock.restart().asSeconds();
+
+            tank1.updateWaterAnimation(elapsedTime);
+            tank2.updateWaterAnimation(elapsedTime);
+            tank3.updateWaterAnimation(elapsedTime);
+            tank4.updateWaterAnimation(elapsedTime);
+
+            window.clear(backgroundColor);
+
+            parametersTable.draw();
+
+            tank1.draw(window);
+            tank2.draw(window);
+            tank3.draw(window);
+            tank4.draw(window);
+
+            Base.draw(window);
+
+            window.draw(TitleText);
+            window.draw(backButton);
+
+            window.display();
+
+            if (simulationShouldClose) {
+                return;
+            }
+        }
+    }
+
+private:
+    RenderWindow& window;
+    Color backgroundColor;
+    Font font;
+    Text TitleText;
+    Text backButton;
+
+    Tank tank1;
+    Tank tank2;
+    Tank tank3;
+    Tank tank4;
+
+    Tank Base;
+
+    array<int, 8> enteredValues;
+    ParametersTable parametersTable;
+
+    bool simulationShouldClose = false;
+
+    void init() {
+        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
+            cerr << "Error loading font" << endl;
+        }
+
+        backgroundColor = Color(0, 0, 255);
+
+        TitleText.setFont(font);
+        TitleText.setCharacterSize(24);
+        TitleText.setFillColor(Color::White);
+        TitleText.setPosition(640.0f, 10.0f);
+        TitleText.setString("Symulacja");
+
+        backButton.setFont(font);
+        backButton.setCharacterSize(24);
+        backButton.setString("cofnij");
+        backButton.setPosition(1150.0, 1.0);
+    }
+
+    void handleButtonClick(const Event& event) {
+        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+
+        if (backButton.getGlobalBounds().contains(mousePos)) {
+            window.clear();
+            window.display();
+            simulationShouldClose = true;
+        }
+    }
+};
+
 class Options {
 public:
     Options(RenderWindow& window, array<int, 8>& enteredValues)
@@ -326,7 +391,7 @@ public:
             window.display();
 
             if (optionsShouldClose) {
-                return;  // Exit the run() method to go back to the Menu
+                return;  
             }
         }
     }
@@ -463,6 +528,93 @@ private:
     }
 };
 
+class Help {
+public:
+    Help(RenderWindow& window)
+        : window(window) {
+        init();
+    }
+
+    void run() {
+        while (window.isOpen()) {
+            Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == Event::Closed) {
+                    window.close();
+                }
+                else if (event.type == Event::MouseButtonReleased) {
+                    handleButtonClick(event);
+                }
+            }
+
+            window.clear();
+            window.draw(backgroundSprite);
+            window.draw(backgroundRect);
+            window.draw(helpText);
+            window.draw(backButton);
+            window.display();
+
+            if (helpShouldClose) {
+                return;
+            }
+
+        }
+    }
+
+private:
+    RenderWindow& window;
+    Font font;
+    Texture background;
+    Sprite backgroundSprite;
+    RectangleShape backgroundRect;
+    Text helpText;
+    Text backButton;
+
+    bool helpShouldClose = false;
+
+
+    void init() {
+        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
+            cerr << "Error loading font" << endl;
+        }
+
+        if (!background.loadFromFile("resources/Images/MenuBG.jpg")) {
+            cerr << "Error loading Menu Background" << endl;
+        }
+
+        backgroundSprite.setTexture(background);
+        backgroundSprite.setScale(
+            static_cast<float>(window.getSize().x) / backgroundSprite.getTexture()->getSize().x,
+            static_cast<float>(window.getSize().y) / backgroundSprite.getTexture()->getSize().y
+        );
+
+        backgroundRect.setSize(Vector2f(450.0f, 720.0f));
+        backgroundRect.setFillColor(Color(0, 0, 0, 128));
+        backgroundRect.setPosition(0.0f, 0.0f);
+
+        helpText.setString("Tu bedzie opis calego\n projektu oraz pomoc");
+        helpText.setFont(font);
+        helpText.setCharacterSize(24);
+        helpText.setPosition(50, 200);
+
+        backButton.setString("Cofnij");
+        backButton.setFont(font);
+        backButton.setCharacterSize(36);
+        backButton.setPosition(50, 500);
+    }
+
+    void handleButtonClick(const Event& event) {
+        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+
+
+        if (backButton.getGlobalBounds().contains(mousePos)) {
+            window.clear();
+            window.display();
+            helpShouldClose = true;
+        }
+
+    }
+};
 
 class Menu {
 public:
@@ -490,7 +642,7 @@ public:
                             cout << "Params" << endl;
                             startOptions();
                         }
-                        else if (paramsButton.getGlobalBounds().contains(mousePos)) {
+                        else if (helpButton.getGlobalBounds().contains(mousePos)) {
                             cout << "help" << endl;
                             startHelp();
                         }
@@ -516,7 +668,7 @@ public:
             else if (currentScreenState == ScreenState::Options) {
                 Options options(window, enteredValues);
                 options.run();
-                currentScreenState = ScreenState::Main;  // Go back to the main menu
+                currentScreenState = ScreenState::Main;  // Powrot do menu
             }
             else if (currentScreenState == ScreenState::Help) {
                 
@@ -564,6 +716,9 @@ private:
 
     void startHelp() {
         window.clear();
+        Help help(window);
+        help.run();
+        
     }
 
 
@@ -621,7 +776,6 @@ private:
 
 
 };
-
 
 class AquaParkSimulator {
 public:
