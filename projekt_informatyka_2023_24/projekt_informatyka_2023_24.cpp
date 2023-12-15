@@ -5,6 +5,8 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Clock.hpp>
 #include <list>
+#include <array>
+#include <fstream>
 
 
 using namespace std;
@@ -95,55 +97,14 @@ private:
 };
 
 class ParametersTable {
-public:
-    ParametersTable(RenderWindow& window, const vector<pair<string, int>>& parameters, const Vector2f& position)
-        : window(window), parameters(parameters), position(position) {
-        initializeElements();
-    }
 
-    void draw() {
-        for (size_t i = 0; i < parameters.size(); ++i) {
-            const auto& parameter = parameters[i];
-            drawParameter(parameter.first, parameter.second, i);
-        }
-    }
-
-private:
-    RenderWindow& window;
-    Font font;
-    vector<pair<string, int>> parameters;
-    Vector2f position;
-    int characterSize = 16;  // Rozmiar font
-    Color backgroundColor = Color(192, 192, 192, 200);  // kolor
-
-    void initializeElements() {
-        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
-            cerr << "Error loading font" << endl;
-        }
-    }
-
-    void drawParameter(const string& labelText, int value, size_t index) {
-        RectangleShape backgroundRect(Vector2f(300.0f, 40.0f));  // rozmiar pola
-        backgroundRect.setFillColor(backgroundColor);
-        backgroundRect.setPosition(position.x, position.y + index * 50.0f);
-
-        Text parameterText;
-        parameterText.setFont(font);
-        parameterText.setCharacterSize(characterSize);
-        parameterText.setPosition(position.x + 5.0f, position.y + index * 50.0f + 5.0f);
-        parameterText.setString(labelText + ": " + to_string(value));
-
-        window.draw(backgroundRect);
-        window.draw(parameterText);
-    }
 };
 
 class Simulation {
 public:
-    Simulation(RenderWindow& window, const vector<pair<string, int>>& parameters)
-        : window(window), tank1(Vector2f(800.0f, 300.0f), Vector2f(150.0f, 300.0f), 0.1f), parameters(parameters),
-        backgroundColor(Color::Blue), font(), TitleText(), parametersTable(window, parameters, Vector2f(10.0f, 10.0f)) {
-        initializeElements();
+    Simulation(sf::RenderWindow& window, const std::array<int, 8>& enteredValues)
+        : window(window), enteredValues(enteredValues) {
+        init();
     }
 
     void run() {
@@ -152,6 +113,9 @@ public:
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) {
                     window.close();
+                }
+                else if (event.type == Event::MouseButtonReleased) {
+                    handleButtonClick(event);
                 }
             }
 
@@ -163,11 +127,15 @@ public:
             window.clear(backgroundColor);
 
             tank1.draw(window);
-            drawParametersTable();
 
             window.draw(TitleText);
+            window.draw(backButton);
 
             window.display();
+
+            if (simulationShouldClose) {
+                return; // wyjscie z run() i powrot do menu
+            }
         }
     }
 
@@ -176,25 +144,44 @@ private:
     Color backgroundColor;
     Font font;
     Text TitleText;
+    Text backButton;
     Tank tank1;
-    vector<pair<string, int>> parameters;
+    array<int, 8> enteredValues;
     ParametersTable parametersTable;
 
-    void initializeElements() {
+    bool simulationShouldClose = false;
+
+    void init() {
         if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
             cerr << "Error loading font" << endl;
         }
+
+        backgroundColor = Color(0, 0, 255);
 
         TitleText.setFont(font);
         TitleText.setCharacterSize(24);
         TitleText.setFillColor(Color::White);
         TitleText.setPosition(640.0f, 10.0f);
-        TitleText.setString("Symualcja");
+        TitleText.setString("Symulacja");
+
+        backButton.setFont(font);
+        backButton.setCharacterSize(24);
+        backButton.setString("cofnij");
+        backButton.setPosition(1150.0, 1.0);
     }
 
-    void drawParametersTable() {
-        parametersTable.draw();
+    void handleButtonClick(const Event& event) {
+        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+
+
+        if (backButton.getGlobalBounds().contains(mousePos)) {
+            window.clear();
+            window.display();
+            simulationShouldClose = true;
+        }
+
     }
+
 };
 
 
@@ -234,6 +221,10 @@ public:
 
     int getValue() const {
         return value;
+    }
+
+    void setValue(int newValue) {
+        value = newValue;
     }
 
 private:
@@ -287,25 +278,160 @@ private:
 
 class Options {
 public:
-    Options(RenderWindow& window) : window(window), 
+    Options(RenderWindow& window, array<int, 8>& enteredValues)
+        : window(window), enteredValues(enteredValues),
 
         // Pool 1
-        waterLevelInput1("Poziom wody w basenie 1", 20, Vector2f(50, 150)),
-        temperatureInput1("Temperatura wody w basenie 1", 20, Vector2f(50, 200)),
+        waterLevelInput1("Poziom wody w basenie 1", enteredValues[0], Vector2f(50, 150)),
+        temperatureInput1("Temperatura wody w basenie 1", enteredValues[1], Vector2f(50, 200)),
 
         // Pool 2
-        waterLevelInput2("Poziom wody w basenie 2", 20, Vector2f(50, 300)),
-        temperatureInput2("Temperatura wody w basenie 2", 20, Vector2f(50, 350)),
+        waterLevelInput2("Poziom wody w basenie 2", enteredValues[2], Vector2f(50, 300)),
+        temperatureInput2("Temperatura wody w basenie 2", enteredValues[3], Vector2f(50, 350)),
 
         // Pool 3
-        waterLevelInput3("Poziom wody w basenie 3", 20, Vector2f(50, 450)),
-        temperatureInput3("Temperatura wody w basenie 3", 20, Vector2f(50, 500)),
+        waterLevelInput3("Poziom wody w basenie 3", enteredValues[4], Vector2f(50, 450)),
+        temperatureInput3("Temperatura wody w basenie 3", enteredValues[5], Vector2f(50, 500)),
 
         // Pool 4
-        waterLevelInput4("Poziom wody w basenie 4", 20, Vector2f(50, 600)),
-        temperatureInput4("Temperatura wody w basenie 4", 20, Vector2f(50, 650))
-    
+        waterLevelInput4("Poziom wody w basenie 4", enteredValues[6], Vector2f(50, 600)),
+        temperatureInput4("Temperatura wody w basenie 4", enteredValues[7], Vector2f(50, 650))
+
     {
+        init();
+    }
+
+    void run() {
+        while (window.isOpen()) {
+            handleEvents();
+            
+
+            window.clear();
+
+            window.draw(backgroundSprite);
+            window.draw(backgroundRect);
+
+            waterLevelInput1.draw(window);
+            temperatureInput1.draw(window);
+            waterLevelInput2.draw(window);
+            temperatureInput2.draw(window);
+            waterLevelInput3.draw(window);
+            temperatureInput3.draw(window);
+            waterLevelInput4.draw(window);
+            temperatureInput4.draw(window);
+
+            window.draw(saveButton);
+            window.draw(backButton);
+
+            window.display();
+
+            if (optionsShouldClose) {
+                return;  // Exit the run() method to go back to the Menu
+            }
+        }
+    }
+
+private:
+    RenderWindow& window;
+    Font font;
+    Texture background;
+    Sprite backgroundSprite;
+    RectangleShape backgroundRect;
+
+    array<int, 8> enteredValues; // zamiana z wektora na tablice
+
+    InputData waterLevelInput1;
+    InputData temperatureInput1;
+    InputData waterLevelInput2;
+    InputData temperatureInput2;
+    InputData waterLevelInput3;
+    InputData temperatureInput3;
+    InputData waterLevelInput4;
+    InputData temperatureInput4;
+
+    Text saveButton;
+    Text backButton;
+
+    int id = 0;
+    bool optionsShouldClose = false;
+
+    void handleEvents() {
+        Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == Event::Closed) {
+                window.close();
+            }
+            else if (event.type == Event::MouseButtonReleased) {
+                handleButtonClick(event);
+            }
+        }
+    }
+
+    
+
+    void handleButtonClick(const Event& event) {
+        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+
+        waterLevelInput1.handleButtonClick(mousePos);
+        temperatureInput1.handleButtonClick(mousePos);
+        waterLevelInput2.handleButtonClick(mousePos);
+        temperatureInput2.handleButtonClick(mousePos);
+        waterLevelInput3.handleButtonClick(mousePos);
+        temperatureInput3.handleButtonClick(mousePos);
+        waterLevelInput4.handleButtonClick(mousePos);
+        temperatureInput4.handleButtonClick(mousePos);
+
+        enteredValues[0] = waterLevelInput1.getValue();
+        enteredValues[1] = temperatureInput1.getValue();
+        enteredValues[2] = waterLevelInput2.getValue();
+        enteredValues[3] = temperatureInput2.getValue();
+        enteredValues[4] = waterLevelInput3.getValue();
+        enteredValues[5] = temperatureInput3.getValue();
+        enteredValues[6] = waterLevelInput4.getValue();
+        enteredValues[7] = temperatureInput4.getValue();
+
+        if (saveButton.getGlobalBounds().contains(mousePos)) {
+            saveParams(enteredValues);
+            window.clear();
+            window.display();
+            optionsShouldClose = true;
+        }
+
+        if (backButton.getGlobalBounds().contains(mousePos)) {
+            window.clear();
+            window.display();
+            optionsShouldClose = true;
+        }
+    }
+
+    void saveParams(const array<int, 8>& values) {
+        cout << "Zapis dane:" << id << endl;
+
+        // Drukowanie do konsoli
+        for (const auto& entry : values) {
+            cout << entry << " ";
+        }
+
+        // Dodanie wartosci do pliku txt
+        ofstream outputFile("resources/saved_params/params.txt");
+
+        if (outputFile.is_open()) {
+            for (const auto& entry : values) {
+                outputFile << entry << " ";
+            }
+            outputFile << endl;
+
+            outputFile.close();
+            cout << "Dane zapisane do pliku." << endl;
+        }
+        else {
+            cerr << "Error opening file for writing: resources/saved_params/params.txt" << endl;
+        }
+
+        id += 1;
+    }
+
+    void init() {
         if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
             cerr << "Error loading font" << endl;
         }
@@ -324,13 +450,24 @@ public:
         backgroundRect.setFillColor(Color(0, 0, 0, 128));
         backgroundRect.setPosition(0.0f, 0.0f);
 
-        
-
-        // Save button
         saveButton.setFont(font);
         saveButton.setCharacterSize(36);
-        saveButton.setString("Rozpocznij symulacje");
+        saveButton.setString("Zapisz");
         saveButton.setPosition(300.0, 75.0);
+
+        backButton.setFont(font);
+        backButton.setCharacterSize(36);
+        backButton.setString("cofnij");
+        backButton.setPosition(900.0, 75.0);
+
+    }
+};
+
+
+class Menu {
+public:
+    Menu(RenderWindow& window) : window(window) {
+        init();
     }
 
     void run() {
@@ -341,34 +478,53 @@ public:
                     window.close();
                 }
                 else if (event.type == Event::MouseButtonReleased) {
-                    handleButtonClick(event);
+                    if (event.mouseButton.button == Mouse::Left) {
+                        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+
+                        if (startButton.getGlobalBounds().contains(mousePos)) {
+                            cout << "Przycisk start" << endl;
+                            startSimulation();
+
+                        }
+                        else if (paramsButton.getGlobalBounds().contains(mousePos)) {
+                            cout << "Params" << endl;
+                            startOptions();
+                        }
+                        else if (paramsButton.getGlobalBounds().contains(mousePos)) {
+                            cout << "help" << endl;
+                            startHelp();
+                        }
+                        else if (exitOption.getGlobalBounds().contains(mousePos)) {
+                            window.close();
+                        }
+                    }
                 }
             }
 
-            window.clear();
-
-            window.draw(backgroundSprite);
-            window.draw(backgroundRect);
-
-            waterLevelInput1.draw(window);
-            temperatureInput1.draw(window);
-            waterLevelInput2.draw(window);
-            temperatureInput2.draw(window);
-            waterLevelInput3.draw(window);
-            temperatureInput3.draw(window);
-            waterLevelInput4.draw(window);
-            temperatureInput4.draw(window);
-
-            window.draw(saveButton);
-
-            window.display();
+            if (currentScreenState == ScreenState::Main) {
+                window.clear();
+                window.draw(backgroundSprite);
+                window.draw(backgroundRect);
+                window.draw(title);
+                window.draw(description);
+                window.draw(startButton);
+                window.draw(paramsButton);
+                window.draw(helpButton);
+                window.draw(exitOption);
+                window.display();
+            }
+            else if (currentScreenState == ScreenState::Options) {
+                Options options(window, enteredValues);
+                options.run();
+                currentScreenState = ScreenState::Main;  // Go back to the main menu
+            }
+            else if (currentScreenState == ScreenState::Help) {
+                
+            }
         }
     }
 
-    // Add a method to get entered values
-    vector<pair<string, int>> getEnteredValues() const {
-        return enteredValues;
-    }
+
 
 private:
     RenderWindow& window;
@@ -376,83 +532,43 @@ private:
     Texture background;
     Sprite backgroundSprite;
     RectangleShape backgroundRect;
+    Text title;
+    Text description;
+    Text startButton;
+    Text paramsButton;
+    Text helpButton;
+    Text exitOption;
 
-    vector<pair<string, int>> enteredValues; // Store entered values and their labels
+    array<int, 8> enteredValues;
 
-    InputData waterLevelInput1;
-    InputData temperatureInput1;
-    InputData waterLevelInput2;
-    InputData temperatureInput2;
-    InputData waterLevelInput3;
-    InputData temperatureInput3;
-    InputData waterLevelInput4;
-    InputData temperatureInput4;
+    enum class ScreenState {
+        Main,
+        Options,
+        Help
+    };
 
-    Text saveButton;
+    ScreenState currentScreenState;
 
-    int id = 0;
 
-    void handleButtonClick(const Event& event) {
-        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
-
-        waterLevelInput1.handleButtonClick(mousePos);
-        temperatureInput1.handleButtonClick(mousePos);
-        waterLevelInput2.handleButtonClick(mousePos);
-        temperatureInput2.handleButtonClick(mousePos);
-        waterLevelInput3.handleButtonClick(mousePos);
-        temperatureInput3.handleButtonClick(mousePos);
-        waterLevelInput4.handleButtonClick(mousePos);
-        temperatureInput4.handleButtonClick(mousePos);
-
-        if (saveButton.getGlobalBounds().contains(mousePos)) {
-            vector<pair<string, int>> enteredValues = saveOptions();
-            startSimulation(window, enteredValues);
-        }
+    void startOptions() {
+        window.clear();
+        Options options(window, enteredValues);
+        options.run();
     }
 
-    vector<pair<string, int>> saveOptions() {
-        enteredValues.clear();
-
-        cout << "Zapis dane:" << id << endl;
-        // Save water level and temperature values for each pool
-        enteredValues.emplace_back("Poziom wody w basenie 1", waterLevelInput1.getValue());
-        enteredValues.emplace_back("Temperatura wody w basenie 1", temperatureInput1.getValue());
-
-        enteredValues.emplace_back("Poziom wody w basenie 2", waterLevelInput2.getValue());
-        enteredValues.emplace_back("Temperatura wody w basenie 2", temperatureInput2.getValue());
-
-        enteredValues.emplace_back("Poziom wody w basenie 3", waterLevelInput3.getValue());
-        enteredValues.emplace_back("Temperatura wody w basenie 3", temperatureInput3.getValue());
-
-        enteredValues.emplace_back("Poziom wody w basenie 4", waterLevelInput4.getValue());
-        enteredValues.emplace_back("Temperatura wody w basenie 4", temperatureInput4.getValue());
-
-        // Print the entered values to the console
-        for (const auto& entry : enteredValues) {
-            cout << entry.first << ": " << entry.second << endl;
-        }
-
-        id += 1;
-
-        return enteredValues;
-    }
-
-
-    void startSimulation(RenderWindow& window, const vector<pair<string, int>>& enteredValues) const {
-      
-        // Pass the entered values to the Simulation constructor
+    void startSimulation() {
+        window.clear();
         Simulation simulation(window, enteredValues);
-        simulation.run(); // start symulacji
+        simulation.run();
     }
-};
+
+    void startHelp() {
+        window.clear();
+    }
 
 
-
-
-
-class Menu {
-public:
-    Menu(RenderWindow& window) : window(window) {
+    void init()
+    {
         if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
             cerr << "Error loading font" << endl;
         }
@@ -487,15 +603,57 @@ public:
         startButton.setCharacterSize(36);
         startButton.setPosition(50, 300);
 
-        optionsButton.setString("Pomoc");
-        optionsButton.setFont(font);
-        optionsButton.setCharacterSize(36);
-        optionsButton.setPosition(50, 350);
+        paramsButton.setString("Parametry");
+        paramsButton.setFont(font);
+        paramsButton.setCharacterSize(36);
+        paramsButton.setPosition(50, 350);
+
+        helpButton.setString("Pomoc");
+        helpButton.setFont(font);
+        helpButton.setCharacterSize(36);
+        helpButton.setPosition(50, 400);
 
         exitOption.setString("Wyjscie");
         exitOption.setFont(font);
         exitOption.setCharacterSize(36);
-        exitOption.setPosition(50, 400);
+        exitOption.setPosition(50, 450);
+    }
+
+
+};
+
+
+class AquaParkSimulator {
+public:
+    AquaParkSimulator(RenderWindow& window)
+        : window(window), menu(window), options(window, enteredValues), simulation(window, enteredValues) {
+        init();
+    }
+
+    array<int, 8> readParamsDataFromFile(const std::string& filename) {
+        ifstream inputFile(filename);
+
+        if (!inputFile.is_open()) {
+            cerr << "Error opening file: " << filename << endl;
+        }
+
+        enteredValues.fill(0);  
+
+        int value;
+        for (int i = 0; i < enteredValues.size() && inputFile >> value; ++i) {
+            enteredValues[i] = value;
+        }
+
+        inputFile.close();
+
+        // Drukowanie wartosci z przekazanego pliku do konsoli w celu sprawdzenia
+        cout << "Entered Values: ";
+        for (const auto& entry : enteredValues) {
+            cout << entry << " ";
+        }
+        cout << endl;
+
+        return enteredValues;
     }
 
     void run() {
@@ -505,69 +663,63 @@ public:
                 if (event.type == Event::Closed) {
                     window.close();
                 }
-                else if (event.type == Event::MouseButtonReleased) {
-                    if (event.mouseButton.button == Mouse::Left) {
-                        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
-
-                        if (startButton.getGlobalBounds().contains(mousePos)) {
-                            cout << "Przycisk start" << endl;
-                            startOptions();
-                            
-                        }
-                        else if (optionsButton.getGlobalBounds().contains(mousePos)) {
-                            cout << "Tu będzie help" << endl;
-                            
-                            
-                        }
-                        else if (exitOption.getGlobalBounds().contains(mousePos)) {
-                            window.close();
-                        }
-                    }
-                }
             }
 
             window.clear();
-            window.draw(backgroundSprite);
-            window.draw(backgroundRect);
-            window.draw(title);
-            window.draw(description);
-            window.draw(startButton);
-            window.draw(optionsButton);
-            window.draw(exitOption);
+
+            if (inMenuScreen) {
+                menu.run();
+                if (optionsShouldClose) {
+                    readParamsDataFromFile("resources/saved_params/params.txt");
+                    startOptions();
+                    inMenuScreen = false;
+                    optionsShouldClose = false;
+                }
+            }
+            else {
+                startSimulation();
+            }
+
             window.display();
         }
     }
 
-    
-
 private:
     RenderWindow& window;
-    Font font;
-    Texture background;
-    Sprite backgroundSprite;
-    RectangleShape backgroundRect;
-    Text title;
-    Text description;
-    Text startButton;
-    Text optionsButton;
-    Text exitOption;
+    Menu menu;
+    Options options;
+    Simulation simulation;
 
+    bool inMenuScreen = true;
+    bool optionsShouldClose = false;
 
+    std::array<int, 8> enteredValues;
+
+    void init() {
+        
+    }
+
+    void startSimulation() {
+        window.clear();
+        simulation.run();
+    }
 
     void startOptions() {
         window.clear();
-        Options options(window);
         options.run();
+    }
+
+    void startHelp() {
+        window.clear();
+        // help
     }
 };
 
-
-
-
 int main() {
     RenderWindow window(VideoMode(1280, 720), "AquaPark simulator");
-    Menu menu(window);
-    menu.run();
+    AquaParkSimulator aquaParkSim(window);
+    aquaParkSim.readParamsDataFromFile("resources/saved_params/params.txt");
+    aquaParkSim.run();
 
     return 0;
 }
