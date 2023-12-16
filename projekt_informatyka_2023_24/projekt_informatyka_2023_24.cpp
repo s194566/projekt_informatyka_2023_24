@@ -13,17 +13,66 @@ using namespace std;
 using namespace sf;
 
 
-class WaterPipe
-{
+class WaterPipe {
 public:
-    WaterPipe()
-    {
-
+    WaterPipe(Vector2f position, Color color, float waterLevel, const vector<Vector2f>& customPoints)
+        : position(position), color(color), waterLevel(waterLevel), customPoints(customPoints) {
+        init();
     }
 
+    void draw(RenderWindow& window) {
+        window.draw(pipeShape);
+        window.draw(waterShape);
+    }
+
+    void updateWaterAnimation(float elapsedTime) {
+        static float waterSpeed = 50.0f;
+
+        float waterLevelChange = waterSpeed * elapsedTime;
+        waterLevel += waterLevelChange;
+
+        if (waterLevel < 0.0f) {
+            waterLevel = 0.0f;
+            waterSpeed = -waterSpeed; 
+        }
+        if (waterLevel > 1.0f) {
+            waterLevel = 1.0f;
+            waterSpeed = -waterSpeed;
+        }
+
+        float waterHeight = pipeSize.y * waterLevel;
+        float waterPositionY = position.y + pipeSize.y - waterHeight;
+        waterShape.setSize(Vector2f(pipeSize.x - 10.0f, waterHeight - 10.0f));
+        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
+    }
 
 private:
+    Vector2f position;
+    Color color;
+    float waterLevel;
+    ConvexShape pipeShape;
+    RectangleShape waterShape;
+    Vector2f pipeSize;
+    vector<Vector2f> customPoints;
 
+    void init() {
+        createCustomShape();
+        pipeSize = Vector2f(150.0f, 200.0f);
+        float waterHeight = pipeSize.y * waterLevel;
+        float waterPositionY = position.y + pipeSize.y - waterHeight;
+        waterShape.setSize(Vector2f(pipeSize.x - 10.0f, waterHeight - 10.0f));
+        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
+        waterShape.setFillColor(Color::Blue); 
+    }
+
+    void createCustomShape() {
+        pipeShape.setPointCount(customPoints.size());
+        for (size_t i = 0; i < customPoints.size(); ++i) {
+            pipeShape.setPoint(i, customPoints[i]);
+        }
+        pipeShape.setPosition(position);
+        pipeShape.setFillColor(color);
+    }
 };
 
 class Tank {
@@ -86,23 +135,11 @@ private:
     }
 };
 
-
 class InputData {
 public:
-    InputData()
-    {
-        labelText = "---";
-        value = 20;
-        position = Vector2f(10.0f, 10.0f);
-
-        initializeElements();
+    InputData() {
+        init();
     }
-
-    InputData(const string& labelText, int defaultValue, const Vector2f& position)
-        : labelText(labelText), value(defaultValue), position(position) {
-        initializeElements();
-    }
-
 
     void draw(RenderWindow& window) {
         window.draw(label);
@@ -126,6 +163,20 @@ public:
 
     void setValue(int newValue) {
         value = newValue;
+        updateValueText();
+    }
+
+    void setString(const string& newString) {
+        labelText = newString;
+        label.setString(labelText);
+    }
+
+    void setPosition(Vector2f newPosition) {
+        position = newPosition;
+        label.setPosition(position.x, position.y);
+        valueText.setPosition(position.x + 400, position.y);
+        incrementButton.setPosition(position.x + 500, position.y);
+        decrementButton.setPosition(position.x + 600, position.y);
     }
 
 private:
@@ -138,7 +189,7 @@ private:
     Text incrementButton;
     Text decrementButton;
 
-    void initializeElements() {
+    void init() {
         font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf");
 
         label.setFont(font);
@@ -177,30 +228,42 @@ private:
     }
 };
 
-class ParametersTable {
+class Parameters {
 public:
-    ParametersTable(const array<int, 8>& dynamicValues, const Vector2f& position, RenderWindow& window)
-        : dynamicValues(dynamicValues), position(position), window(window) {
+    Parameters( const Vector2f& position, RenderWindow& window)
+        : position(position), window(window) {
         init();
     }
 
-    void draw() {
+    void draw(int data[]) {
         for (size_t i = 0; i < fixedLabels.size(); ++i) {
             const string labelText = fixedLabels[i] + " ";
-            drawParameter(labelText, dynamicVal[i], i);
+            drawParameter(labelText, data[i], i);
+        }
+    }
+
+    void loadDataFromFileToSimulation(int data[], const string& filename) {
+
+        ifstream fin(filename);
+
+        if (fin.is_open()) {
+            for (int i = 0; i < 8; i++) {
+                fin >> data[i];
+            }
+
+            fin.close();
+            cout << "Data loaded from file." << endl;
+        }
+        else {
+            cout << "Unable to open file for loading." << endl;
         }
     }
 
 private:
-    const array<int, 8>& dynamicValues; 
+    
     Vector2f position; 
     Font font;
     RenderWindow& window;
-
-    const array<int, 8> dynamicVal = { // tymczasowe
-        1,2,3,4,5,6,7,8
-    };
-
 
     const array<string, 8> fixedLabels = {
         "Poziom wody 1:",
@@ -233,19 +296,22 @@ private:
         window.draw(backgroundRect);
         window.draw(parameterText);
     }
+
+    
+
 };
 
 class Simulation {
 public:
-    Simulation(RenderWindow& window, const std::array<int, 8>& enteredValues)
+    Simulation(RenderWindow& window)
         : window(window),
-        enteredValues(enteredValues),
-        parametersTable(enteredValues, Vector2f(10.0f, 10.0f), window),
+        parameters(Vector2f(10.0f, 10.0f), window),
         Base(Vector2f(200.0f, 650.0f), Vector2f(1000.0f, 50.0f), 1),
         tank1(Vector2f(350.0f, 200.0f), Vector2f(100.0f, 250.0f), 0.5),
         tank2(Vector2f(500.0f, 400.0f), Vector2f(200.0f, 100.0f), 0.5),
         tank3(Vector2f(750.0f, 300.0f), Vector2f(200.0f, 200.0f), 0.5),
-        tank4(Vector2f(1000.0f, 200.0f), Vector2f(200.0f, 200.0f), 0.5)
+        tank4(Vector2f(1000.0f, 200.0f), Vector2f(200.0f, 200.0f), 0.5),
+        pipe1(Vector2f(100.0f, 100.0f), Color::Red, 0.5f, customPoints)
     {
         init();
     }
@@ -261,6 +327,7 @@ public:
                     handleButtonClick(event);
                 }
             }
+            
 
             Clock clock;
             float elapsedTime = clock.restart().asSeconds();
@@ -272,7 +339,7 @@ public:
 
             window.clear(backgroundColor);
 
-            parametersTable.draw();
+            parameters.draw(data_list);
 
             tank1.draw(window);
             tank2.draw(window);
@@ -280,6 +347,8 @@ public:
             tank4.draw(window);
 
             Base.draw(window);
+
+            //pipe1.draw(window);
 
             window.draw(TitleText);
             window.draw(backButton);
@@ -306,10 +375,25 @@ private:
 
     Tank Base;
 
+    WaterPipe pipe1;
+
     array<int, 8> enteredValues;
-    ParametersTable parametersTable;
+    Parameters parameters;
 
     bool simulationShouldClose = false;
+
+    int data_list[8] = { 0 };
+
+    vector<Vector2f> customPoints = {
+    {0.0f, 0.0f},
+    {50.0f, 0.0f},
+    {50.0f, 100.0f},
+    {200.0f, 100.0f},
+    {200.0f, 120.0f},
+    {0.0f, 120.0f}
+    };
+
+    
 
     void init() {
         if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
@@ -328,6 +412,19 @@ private:
         backButton.setCharacterSize(24);
         backButton.setString("cofnij");
         backButton.setPosition(1150.0, 1.0);
+
+        
+
+
+        parameters.loadDataFromFileToSimulation(data_list, "resources/saved_params/params.txt");
+        
+
+        for (int i = 0; i < 8; i++) {
+            cout << data_list[i] << " ";
+        }
+
+        cout << endl;
+
     }
 
     void handleButtonClick(const Event& event) {
@@ -339,30 +436,19 @@ private:
             simulationShouldClose = true;
         }
     }
+
+    
+
 };
 
 class Options {
 public:
-    Options(RenderWindow& window, array<int, 8>& enteredValues)
-        : window(window), enteredValues(enteredValues),
-
-        // Pool 1
-        waterLevelInput1("Poziom wody w basenie 1", enteredValues[0], Vector2f(50, 150)),
-        temperatureInput1("Temperatura wody w basenie 1", enteredValues[1], Vector2f(50, 200)),
-
-        // Pool 2
-        waterLevelInput2("Poziom wody w basenie 2", enteredValues[2], Vector2f(50, 300)),
-        temperatureInput2("Temperatura wody w basenie 2", enteredValues[3], Vector2f(50, 350)),
-
-        // Pool 3
-        waterLevelInput3("Poziom wody w basenie 3", enteredValues[4], Vector2f(50, 450)),
-        temperatureInput3("Temperatura wody w basenie 3", enteredValues[5], Vector2f(50, 500)),
-
-        // Pool 4
-        waterLevelInput4("Poziom wody w basenie 4", enteredValues[6], Vector2f(50, 600)),
-        temperatureInput4("Temperatura wody w basenie 4", enteredValues[7], Vector2f(50, 650))
+    Options(RenderWindow& window)
+        : window(window), 
+        parameters(Vector2f(10.0f, 10.0f), window)
 
     {
+        loadDataFromFile("resources/saved_params/params.txt");
         init();
     }
 
@@ -375,6 +461,26 @@ public:
 
             window.draw(backgroundSprite);
             window.draw(backgroundRect);
+
+            
+            waterLevelInput1.setString("Test");
+            temperatureInput1.setString("Test2");
+            waterLevelInput2.setString("Test2");
+            temperatureInput2.setString("Tes3t");
+            waterLevelInput3.setString("Test4");
+            temperatureInput3.setString("Te5st");
+            waterLevelInput4.setString("Test6");
+            temperatureInput4.setString("Te7st");
+
+            waterLevelInput1.setPosition(Vector2f(100.0f, 100.0f));
+            temperatureInput1.setPosition(Vector2f(100.0f, 140.0f));
+            waterLevelInput2.setPosition(Vector2f(100.0f, 180.0f));
+            temperatureInput2.setPosition(Vector2f(100.0f, 220.0f));
+            waterLevelInput3.setPosition(Vector2f(100.0f, 260.0f));
+            temperatureInput3.setPosition(Vector2f(100.0f, 300.0f));
+            waterLevelInput4.setPosition(Vector2f(100.0f, 340.0f));
+            temperatureInput4.setPosition(Vector2f(100.0f, 380.0f));
+
 
             waterLevelInput1.draw(window);
             temperatureInput1.draw(window);
@@ -396,6 +502,34 @@ public:
         }
     }
 
+    void loadDataFromFile(const std::string& filePath) {
+        // Open the file for reading
+        std::ifstream inputFile(filePath);
+
+        if (inputFile.is_open()) {
+            for (int i = 0; i < 8; ++i) {
+                if (!(inputFile >> data_list[i])) {
+                    cerr << "Error reading data from file: " << filePath << endl;
+                    data_list[i] = 0;
+                }
+            }
+
+            waterLevelInput1.setValue(data_list[0]);
+            temperatureInput1.setValue(data_list[1]);
+            waterLevelInput2.setValue(data_list[2]);
+            temperatureInput2.setValue(data_list[3]);
+            waterLevelInput3.setValue(data_list[4]);
+            temperatureInput3.setValue(data_list[5]);
+            waterLevelInput4.setValue(data_list[6]);
+            temperatureInput4.setValue(data_list[7]);
+
+            inputFile.close();
+        }
+        else {
+            cerr << "Error opening file for reading: " << filePath << endl;
+        }
+    }
+
 private:
     RenderWindow& window;
     Font font;
@@ -403,7 +537,10 @@ private:
     Sprite backgroundSprite;
     RectangleShape backgroundRect;
 
-    array<int, 8> enteredValues; // zamiana z wektora na tablice
+    array<int, 8> enteredValues; 
+
+    int data_list[8] = { 0 };
+    Parameters parameters;
 
     InputData waterLevelInput1;
     InputData temperatureInput1;
@@ -666,7 +803,7 @@ public:
                 window.display();
             }
             else if (currentScreenState == ScreenState::Options) {
-                Options options(window, enteredValues);
+                Options options(window);
                 options.run();
                 currentScreenState = ScreenState::Main;  // Powrot do menu
             }
@@ -704,13 +841,13 @@ private:
 
     void startOptions() {
         window.clear();
-        Options options(window, enteredValues);
+        Options options(window);
         options.run();
     }
 
     void startSimulation() {
         window.clear();
-        Simulation simulation(window, enteredValues);
+        Simulation simulation(window);
         simulation.run();
     }
 
@@ -780,34 +917,8 @@ private:
 class AquaParkSimulator {
 public:
     AquaParkSimulator(RenderWindow& window)
-        : window(window), menu(window), options(window, enteredValues), simulation(window, enteredValues) {
+        : window(window), menu(window), options(window), simulation(window) {
         init();
-    }
-
-    array<int, 8> readParamsDataFromFile(const std::string& filename) {
-        ifstream inputFile(filename);
-
-        if (!inputFile.is_open()) {
-            cerr << "Error opening file: " << filename << endl;
-        }
-
-        enteredValues.fill(0);  
-
-        int value;
-        for (int i = 0; i < enteredValues.size() && inputFile >> value; ++i) {
-            enteredValues[i] = value;
-        }
-
-        inputFile.close();
-
-        // Drukowanie wartosci z przekazanego pliku do konsoli w celu sprawdzenia
-        cout << "Entered Values: ";
-        for (const auto& entry : enteredValues) {
-            cout << entry << " ";
-        }
-        cout << endl;
-
-        return enteredValues;
     }
 
     void run() {
@@ -824,7 +935,6 @@ public:
             if (inMenuScreen) {
                 menu.run();
                 if (optionsShouldClose) {
-                    readParamsDataFromFile("resources/saved_params/params.txt");
                     startOptions();
                     inMenuScreen = false;
                     optionsShouldClose = false;
@@ -865,14 +975,13 @@ private:
 
     void startHelp() {
         window.clear();
-        // help
+        
     }
 };
 
 int main() {
     RenderWindow window(VideoMode(1280, 720), "AquaPark simulator");
     AquaParkSimulator aquaParkSim(window);
-    aquaParkSim.readParamsDataFromFile("resources/saved_params/params.txt");
     aquaParkSim.run();
 
     return 0;
