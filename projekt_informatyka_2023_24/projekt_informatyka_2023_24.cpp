@@ -1,10 +1,45 @@
-﻿// AquaPark simulator
+﻿/*
+
+AquaPark simulator
+
+
+Temat 2
+
+Wizualizacja procesu przemysłowego napełnianie basenów w aquaparku oraz podgrzewania wody w tych basenach.
+
+1. Animacja kierunku przepływu medium w rurach, animacja poziomu wody, animacja podgrzewania/ oziębiania wody, animacja pracy pompy.
+2. 4 zbiorniki i 3 rury.
+3. jedna rura prosta / jedna rura zakrzywiona 90 stopni / jeden trójnik
+4. Zadawanie wartości początkowych w zakładce opcje
+5. Automatyczny process anmiacja
+
+
+zakres minimalny
+
+01. 4 zbiorniki (baseny)
+    a) W symulacji napis symulacja aktywna / symulacja zakończona
+    b) 3 rury z wodą o nieregularnym kształcie
+02. Stały element graficzny tło (zdjęcie basenów w menu głównym)
+03. Sterowanie pompy on/off przez myszkę
+04. Wybór sceneri kolory basenów.
+05. Po wciśnięcie F1 przechodzimy do strony HELP
+06. Kliknięcie close lub escape
+07. Popup czy na pewno chcesz wyjść
+08. Program zapisuje informacje o wartościach zadanych w pliku txt w folderze resources/saved_params/
+09. Struktury danych w kodzie gdzieś są.
+10.
+11. Program wykorzystuje techniki programowania obiektowego.
+12. Graficzne menu
+
+
+*/
 
 #include <iostream>
 #include <string>
 #include <SFML/Graphics.hpp>
+//#include <SFML/Window.hpp>
 #include <SFML/System/Clock.hpp>
-#include <list>
+//#include <list>
 #include <array>
 #include <fstream>
 
@@ -12,11 +47,72 @@
 using namespace std;
 using namespace sf;
 
+class WaterPump {
+public:
+    WaterPump() {
+        init();
+    }
+
+    void setPosition(const Vector2f& newPosition) {
+        sprite.setPosition(newPosition);
+    }
+
+    void setSize(const Vector2f& newSize) {
+        sprite.setScale(newSize.x / texture.getSize().x, newSize.y / texture.getSize().y);
+    }
+
+    void draw(RenderWindow& window) {
+        window.draw(sprite);
+    }
+
+private:
+    Texture texture; 
+    Sprite sprite;   
+
+    void init() {
+        if (!texture.loadFromFile("resources/Images/water-pump.png")) {
+            cerr << "Error loading water pump texture" << endl;
+        }
+
+        sprite.setTexture(texture);
+    }
+};
+
+class HeatingMachine {
+public:
+    HeatingMachine() {
+        init();
+    }
+
+    void setPosition(const Vector2f& newPosition) {
+        sprite.setPosition(newPosition);
+    }
+
+    void setSize(const Vector2f& newSize) {
+        sprite.setScale(newSize.x / texture.getSize().x, newSize.y / texture.getSize().y);
+    }
+
+    void draw(RenderWindow& window) {
+        window.draw(sprite);
+    }
+
+private:
+    sf::Texture texture; 
+    sf::Sprite sprite;   
+
+    void init() {
+        if (!texture.loadFromFile("resources/Images/heating-machine.png")) {
+            cerr << "Error loading water pump texture" << endl;
+        }
+
+        sprite.setTexture(texture);
+
+    }
+};
 
 class WaterPipe {
 public:
-    WaterPipe(Vector2f position, Color color, float waterLevel, const vector<Vector2f>& customPoints)
-        : position(position), color(color), waterLevel(waterLevel), customPoints(customPoints) {
+    WaterPipe() {
         init();
     }
 
@@ -25,113 +121,171 @@ public:
         window.draw(waterShape);
     }
 
-    void updateWaterAnimation(float elapsedTime) {
-        static float waterSpeed = 50.0f;
+    bool updateWaterAnimation(float elapsedTime, float waterSpeed) {
 
-        float waterLevelChange = waterSpeed * elapsedTime;
-        waterLevel += waterLevelChange;
+        float targetWaterLevel = static_cast<float>(100) / 100.0f;
 
-        if (waterLevel < 0.0f) {
-            waterLevel = 0.0f;
-            waterSpeed = -waterSpeed; 
+        float levelDifference = targetWaterLevel - waterLevel;
+
+        float stepSize = waterSpeed * elapsedTime;
+
+        if (abs(levelDifference) > stepSize) {
+            waterLevel += (levelDifference > 0.0f) ? stepSize : -stepSize;
         }
-        if (waterLevel > 1.0f) {
-            waterLevel = 1.0f;
-            waterSpeed = -waterSpeed;
+        else {
+            waterLevel = targetWaterLevel;
+            waterSpeed = 0.0f;
+            return true;
         }
 
-        float waterHeight = pipeSize.y * waterLevel;
-        float waterPositionY = position.y + pipeSize.y - waterHeight;
-        waterShape.setSize(Vector2f(pipeSize.x - 10.0f, waterHeight - 10.0f));
-        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
+        float waterHeight = waterPipeSize.y * waterLevel;
+        float waterPositionY = waterPipePosition.y + waterPipeSize.y - waterHeight;
+        waterShape.setSize(Vector2f(waterPipeSize.x - 0.0f, waterHeight - 0.0f));
+        waterShape.setPosition(waterPipePosition.x + 0.0f, waterPositionY + 0.0f);
+
+        return false;
+    }
+
+    void setPipePosition(Vector2f position)
+    {
+        pipeShape.setPosition(position);
+    }
+
+    void setWaterPipePosition(Vector2f position)
+    {
+        waterPipePosition = position;
+        updateWaterPosition();
+    }
+
+    void setPipeSize(Vector2f size) {
+        pipeSize = size;
+        pipeShape.setSize(pipeSize);
+    }
+
+    void setWaterPipeSize(Vector2f size)
+    {
+        waterPipeSize = size;
+        updateWaterPosition();
+    }
+
+    void setPipeColor(Color pipeColor)
+    {
+        pipeShape.setFillColor(pipeColor);
+    }
+
+    void setWaterColor(Color waterColor)
+    {
+        waterShape.setFillColor(waterColor);
+    }
+
+    void setWaterLevel(float NewWaterLevel)
+    {
+        waterLevel = NewWaterLevel;
     }
 
 private:
-    Vector2f position;
-    Color color;
-    float waterLevel;
-    ConvexShape pipeShape;
-    RectangleShape waterShape;
+    Vector2f pipePosition;
+    Vector2f waterPipePosition;
     Vector2f pipeSize;
-    vector<Vector2f> customPoints;
+    Vector2f waterPipeSize;
+    float waterLevel;
+    RectangleShape pipeShape;
+    RectangleShape waterShape;
 
     void init() {
-        createCustomShape();
-        pipeSize = Vector2f(150.0f, 200.0f);
-        float waterHeight = pipeSize.y * waterLevel;
-        float waterPositionY = position.y + pipeSize.y - waterHeight;
-        waterShape.setSize(Vector2f(pipeSize.x - 10.0f, waterHeight - 10.0f));
-        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
-        waterShape.setFillColor(Color::Blue); 
+        //pipeShape.setSize(pipeSize);
+        //pipeShape.setPosition(pipePosition);
+        //pipeShape.setFillColor(Color::Green);
     }
 
-    void createCustomShape() {
-        pipeShape.setPointCount(customPoints.size());
-        for (size_t i = 0; i < customPoints.size(); ++i) {
-            pipeShape.setPoint(i, customPoints[i]);
-        }
-        pipeShape.setPosition(position);
-        pipeShape.setFillColor(color);
+    void updateWaterPosition() {
+        float waterHeight = waterPipeSize.y * waterLevel;
+        float waterPositionY = waterPipePosition.y + waterPipeSize.y - waterHeight;
+        waterShape.setSize(Vector2f(waterPipeSize.x - 10.0f, waterHeight - 0.0f));
+        waterShape.setPosition(waterPipePosition.x + 5.0f, waterPositionY + 5.0f);
     }
 };
 
 class Tank {
 public:
-    Tank(Vector2f position, Vector2f size, float waterLevel) : position(position), size(size), waterLevel(waterLevel) {
+    Tank() {
         init();
     }
 
-    void draw(RenderWindow& window) {
+    void draw(RenderWindow& window)
+    {
         window.draw(tankShape);
         window.draw(waterShape);
     }
 
-    void updateWaterAnimation(float elapsedTime) {
-        // animacja param
-        static float waterSpeed = 50.0f;
-        static float waterAmplitude = 30.0f;
+    bool updateWaterAnimation(float elapsedTime, int targetPercentage, float waterSpeed) {
+        
+        float targetWaterLevel = static_cast<float>(targetPercentage) / 100.0f;
 
+        float levelDifference = targetWaterLevel - waterLevel;
 
-        float waterLevelChange = waterSpeed * elapsedTime;
-        waterLevel += waterLevelChange;
+        float stepSize = waterSpeed * elapsedTime;
 
-
-        if (waterLevel < 0.0f) {
-            waterLevel = 0.0f;
-            waterSpeed = -waterSpeed; //cofanie
+        if (abs(levelDifference) > stepSize) {
+            waterLevel += (levelDifference > 0.0f) ? stepSize : -stepSize;
         }
-        if (waterLevel > 1.0f) {
-            waterLevel = 1.0f;
-            waterSpeed = -waterSpeed;
+        else {
+            waterLevel = targetWaterLevel;
+            waterSpeed = 0.0f;
+            return true;
         }
 
-        // update
+        // Update
         float waterHeight = size.y * waterLevel;
         float waterPositionY = position.y + size.y - waterHeight;
-        waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 10.0f));
-        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
+        waterShape.setSize(sf::Vector2f(size.x - 10.0f, waterHeight - 0.0f));
+        waterShape.setPosition(position.x + 5.0f, waterPositionY - 5.0f);
+
+        return false;
     }
 
+    void setPosition(Vector2f newPosition) {
+        position = newPosition;
+        tankShape.setPosition(position);
+        updateWaterPosition();
+    }
+
+    void setSize(Vector2f newSize) {
+        size = newSize;
+        tankShape.setSize(size);
+        updateWaterPosition();
+    }
+
+    void setWaterLevel(float newWaterLevel) {
+        waterLevel = newWaterLevel;
+        updateWaterPosition();
+    }
 
 private:
-    Vector2f position;
-    Vector2f size;
-    float waterLevel;
+    Vector2f position = { 0.0f, 0.0f };
+    Vector2f size = { 100.0f, 100.0f };
+    float waterLevel = { 0.5f };
     RectangleShape tankShape;
     RectangleShape waterShape;
 
     void init() {
-        // Duzy kwadrat init
         tankShape.setSize(size);
         tankShape.setPosition(position);
         tankShape.setFillColor(Color::Green);
 
-        // Oblicz pozycję i rozmiar
         float waterHeight = size.y * waterLevel;
         float waterPositionY = position.y + size.y - waterHeight;
-        waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 10.0f));
+        waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 0.0f));
         waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
-        waterShape.setFillColor(Color::Blue); //kolor wody
+        waterShape.setFillColor(Color::Blue);
+
+    }
+
+    void updateWaterPosition() {
+        float waterHeight = size.y * waterLevel;
+        float waterPositionY = position.y + size.y - waterHeight;
+        waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 0.0f));
+        waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
     }
 };
 
@@ -259,6 +413,22 @@ public:
         }
     }
 
+    void loadParametersDataInto(int data[], const string& filename) {
+        ifstream fin(filename);
+
+        if (fin.is_open()) {
+            for (int i = 0; i < 8; i++) {
+                fin >> data[i];
+            }
+
+            fin.close();
+            cout << "Data loaded into array." << endl;
+        }
+        else {
+            cout << "Unable to open file for loading." << endl;
+        }
+    }
+
 private:
     
     Vector2f position; 
@@ -301,17 +471,144 @@ private:
 
 };
 
+class Popup {
+public:
+    Popup(Vector2f position) : position(position), size(Vector2f(400.0f, 200.0f)) {
+        init();
+    }
+
+    void drawYesNo(RenderWindow& window) {
+        window.draw(backgroundRect);
+        window.draw(messageText);
+        window.draw(yesButtonSprite);
+        window.draw(noButtonSprite);
+    }
+
+    void drawRestart(RenderWindow& window) {
+        window.draw(backgroundRect);
+        window.draw(messageText);
+        window.draw(restartButtonSprite);
+    }
+
+    bool showYesNoPopup(RenderWindow& window) {
+        while (window.isOpen()) {
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) {
+                    window.close();
+                }
+                else if (event.type == sf::Event::MouseButtonReleased) {
+                    if (event.mouseButton.button == sf::Mouse::Left) {
+                        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+                        if (yesButtonSprite.getGlobalBounds().contains(mousePos)) {
+                            return true;
+                        }
+                        else if (noButtonSprite.getGlobalBounds().contains(mousePos)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            drawYesNo(window);
+            window.display();
+        }
+
+        return false; // Handle window closure
+    }
+
+    bool showRestartPopup(sf::RenderWindow& window) {
+        while (window.isOpen()) {
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) {
+                    window.close();
+                }
+                else if (event.type == sf::Event::MouseButtonReleased) {
+                    if (event.mouseButton.button == sf::Mouse::Left) {
+                        Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+                        if (yesButtonSprite.getGlobalBounds().contains(mousePos)) {
+                            return true;
+                        }
+                        else if (noButtonSprite.getGlobalBounds().contains(mousePos)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            drawRestart(window);
+            window.display();
+        }
+
+        return false;
+    }
+
+private:
+    Font font;
+    Vector2f position;
+    Vector2f size;
+    float waterLevel;
+    RectangleShape backgroundRect;
+    Text messageText;
+    Sprite yesButtonSprite;
+    Sprite noButtonSprite;
+    Sprite restartButtonSprite;
+    Texture yesTexture;
+    Texture noTexture;
+    Texture restartTexture;
+
+    void init() {
+        backgroundRect.setSize(size);
+        backgroundRect.setFillColor(Color(255, 255, 255, 200));
+        backgroundRect.setPosition(position);
+
+        if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
+            cerr << "Error loading font." << endl;
+        }
+
+        messageText.setString("Do you want to leave?");
+        messageText.setFont(font);
+        messageText.setCharacterSize(24); 
+        messageText.setFillColor(Color::Black);
+
+        
+        float textPosX = position.x + (size.x - messageText.getGlobalBounds().width) / 2;
+        float textPosY = position.y + ((size.y - messageText.getGlobalBounds().height) / 2) - 50.0f;
+        messageText.setPosition(textPosX, textPosY);
+
+        
+        if (!yesTexture.loadFromFile("resources/Images/yes-button.png") ||
+            !noTexture.loadFromFile("resources/Images/no-button.png") ||
+            !restartTexture.loadFromFile("resources/Images/reset-button.jpg"))
+        {
+            cerr << "Error loading button textures." << endl;
+
+        }
+
+        yesButtonSprite.setTexture(yesTexture);
+        yesButtonSprite.setPosition(position.x + 100.0f, position.y + size.y - 100.0f);
+        yesButtonSprite.setScale(100.0f / yesButtonSprite.getLocalBounds().width, 100.0f / yesButtonSprite.getLocalBounds().height);
+
+        noButtonSprite.setTexture(noTexture);
+        noButtonSprite.setPosition(position.x + 200.0f, position.y + size.y - 100.0f);
+        noButtonSprite.setScale(100.0f / noButtonSprite.getLocalBounds().width, 100.0f / noButtonSprite.getLocalBounds().height);
+
+        restartButtonSprite.setTexture(restartTexture);
+        restartButtonSprite.setPosition(position.x + 150.0f, position.y + size.y - 100.0f);
+        restartButtonSprite.setScale(100.0f / yesButtonSprite.getLocalBounds().width, 100.0f / yesButtonSprite.getLocalBounds().height);
+    }
+};
+
 class Simulation {
 public:
     Simulation(RenderWindow& window)
         : window(window),
-        parameters(Vector2f(10.0f, 10.0f), window),
-        Base(Vector2f(200.0f, 650.0f), Vector2f(1000.0f, 50.0f), 1),
-        tank1(Vector2f(350.0f, 200.0f), Vector2f(100.0f, 250.0f), 0.5),
-        tank2(Vector2f(500.0f, 400.0f), Vector2f(200.0f, 100.0f), 0.5),
-        tank3(Vector2f(750.0f, 300.0f), Vector2f(200.0f, 200.0f), 0.5),
-        tank4(Vector2f(1000.0f, 200.0f), Vector2f(200.0f, 200.0f), 0.5),
-        pipe1(Vector2f(100.0f, 100.0f), Color::Red, 0.5f, customPoints)
+        parameters(Vector2f(10.0f, 60.0f), window),
+        exitPopup(Vector2f(440.0f, 260.0f)),
+        SimulationEndPopup(Vector2f(440.0f, 260.0f))
     {
         init();
     }
@@ -321,7 +618,10 @@ public:
             sf::Event event;
             while (window.pollEvent(event)) {
                 if (event.type == sf::Event::Closed) {
-                    window.close();
+                    cout << "Przycisk close" << endl;
+                    if (exitPopup.showYesNoPopup(window)) {
+                        window.close();
+                    }
                 }
                 else if (event.type == sf::Event::MouseButtonReleased) {
                     handleButtonClick(event);
@@ -332,26 +632,103 @@ public:
             Clock clock;
             float elapsedTime = clock.restart().asSeconds();
 
-            tank1.updateWaterAnimation(elapsedTime);
-            tank2.updateWaterAnimation(elapsedTime);
-            tank3.updateWaterAnimation(elapsedTime);
-            tank4.updateWaterAnimation(elapsedTime);
+
+            bool animationPipe1Completed = false;
+            bool animationPipe2Completed = false;
+            bool animationPipe3Completed = false;
+            bool animationPipe4Completed = false;
+            bool animationPipe5Completed = false;
+            bool animationPipe6Completed = false;
+            bool animationPipe7Completed = false;
+
+            bool tankAnimation1Completed = false;
+            bool tankAnimation2Completed = false;
+            bool tankAnimation3Completed = false;
+            bool tankAnimation4Completed = false;
+
+
+            // Path 1
+            if (!animationPipe2Completed) {
+                animationPipe2Completed = pipe2.updateWaterAnimation(elapsedTime, 3000);
+            }
+
+            if (animationPipe2Completed && !animationPipe1Completed) {
+                animationPipe1Completed = pipe1.updateWaterAnimation(elapsedTime, 3000);
+            }
+
+            if (animationPipe1Completed) {
+                tankAnimation1Completed = tank1.updateWaterAnimation(elapsedTime, data_list[6], 100);
+            }
+
+            // Path 2
+            if (!animationPipe6Completed) {
+                animationPipe6Completed = pipe6.updateWaterAnimation(elapsedTime, 3000);
+            }
+
+            if (animationPipe6Completed) {
+                animationPipe5Completed = pipe5.updateWaterAnimation(elapsedTime, 3000);
+            }
+
+            if (animationPipe5Completed) {
+                animationPipe3Completed = pipe3.updateWaterAnimation(elapsedTime, 3000);
+                animationPipe4Completed = pipe4.updateWaterAnimation(elapsedTime, 3000);
+            }
+
+            if (animationPipe3Completed && animationPipe4Completed) {
+                tankAnimation2Completed = tank2.updateWaterAnimation(elapsedTime, data_list[6], 100);
+                tankAnimation3Completed = tank3.updateWaterAnimation(elapsedTime, data_list[6], 100);
+            }
+
+            // Path 3
+            if (!animationPipe7Completed) {
+                animationPipe7Completed = pipe7.updateWaterAnimation(elapsedTime, 3000);
+            }
+            if (animationPipe7Completed) {
+                tankAnimation4Completed = tank4.updateWaterAnimation(elapsedTime, data_list[6], 100);
+            }
+
+            if (tankAnimation1Completed && tankAnimation2Completed && tankAnimation3Completed && tankAnimation4Completed) {
+                cout << "All animations completed!" << endl;
+                SimulationEndPopup.showRestartPopup(window);
+                break;
+            }
+
+
 
             window.clear(backgroundColor);
 
+            drawTopStrip();
+
             parameters.draw(data_list);
+
+            //put parameters data into array
 
             tank1.draw(window);
             tank2.draw(window);
             tank3.draw(window);
             tank4.draw(window);
+            base.draw(window);
 
-            Base.draw(window);
+            // Zamina kolejnosci do poprawnego nakładania warstw
 
-            //pipe1.draw(window);
+            pipe2.draw(window);
+            pipe1.draw(window);
+            
+            pipe5.draw(window);
+            pipe3.draw(window);
+            pipe4.draw(window);
+            pipe6.draw(window);
 
-            window.draw(TitleText);
-            window.draw(backButton);
+            pipe7.draw(window);
+          
+            pump1.draw(window);
+            //pump2.draw(window);
+            //pump3.draw(window);
+
+            //HM1.draw(window);
+            //HM2.draw(window);
+            //HM3.draw(window);
+            
 
             window.display();
 
@@ -365,6 +742,7 @@ private:
     RenderWindow& window;
     Color backgroundColor;
     Font font;
+    Text simulationStatus;
     Text TitleText;
     Text backButton;
 
@@ -372,28 +750,40 @@ private:
     Tank tank2;
     Tank tank3;
     Tank tank4;
-
-    Tank Base;
+    Tank base;
 
     WaterPipe pipe1;
+    WaterPipe pipe2;
+    WaterPipe pipe3;
+    WaterPipe pipe4;
+    WaterPipe pipe5;
+    WaterPipe pipe6;
+    WaterPipe pipe7;
 
-    array<int, 8> enteredValues;
+    WaterPump pump1;
+    WaterPump pump2;
+    WaterPump pump3;
+
+    HeatingMachine HM1;
+    HeatingMachine HM2;
+    HeatingMachine HM3;
+
+
+    
+
+    Popup exitPopup;
+    Popup SimulationEndPopup;
+    
     Parameters parameters;
+
+    RectangleShape strip;
 
     bool simulationShouldClose = false;
 
     int data_list[8] = { 0 };
 
-    vector<Vector2f> customPoints = {
-    {0.0f, 0.0f},
-    {50.0f, 0.0f},
-    {50.0f, 100.0f},
-    {200.0f, 100.0f},
-    {200.0f, 120.0f},
-    {0.0f, 120.0f}
-    };
 
-    
+ 
 
     void init() {
         if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
@@ -402,28 +792,116 @@ private:
 
         backgroundColor = Color(0, 0, 255);
 
-        TitleText.setFont(font);
-        TitleText.setCharacterSize(24);
-        TitleText.setFillColor(Color::White);
-        TitleText.setPosition(640.0f, 10.0f);
-        TitleText.setString("Symulacja");
 
-        backButton.setFont(font);
-        backButton.setCharacterSize(24);
-        backButton.setString("cofnij");
-        backButton.setPosition(1150.0, 1.0);
+        // Create a Tank
 
+        base.setPosition(Vector2f(650.0f, 650.0f));
+        base.setSize(Vector2f(600.0f, 60.0f));
+        base.setWaterLevel(1);
         
+        tank1.setPosition(Vector2f(350.0f, 150.0f));
+        tank1.setSize(Vector2f(100.0f, 250.0f));
+        tank1.setWaterLevel(0);
 
+        tank2.setPosition(Vector2f(500.0f, 200.0f));
+        tank2.setSize(Vector2f(200.0f, 150.0f));
+        tank2.setWaterLevel(0);
+
+        tank3.setPosition(Vector2f(750.0f, 200.0f));
+        tank3.setSize(Vector2f(200.0f, 150.0f));
+        tank3.setWaterLevel(0);
+
+        tank4.setPosition(Vector2f(1000.0f, 100.0f));
+        tank4.setSize(Vector2f(200.0f, 200.0f));
+        tank4.setWaterLevel(0);
+
+        // create WaterPipe
+
+        pipe1.setPipePosition(Vector2f(380.0f, 395.0f));
+        pipe1.setPipeSize(Vector2f(40.0f, 265.0f));
+        pipe1.setPipeColor(Color::Red);
+        pipe1.setWaterPipePosition(Vector2f(390.0f, 395.0f));
+        pipe1.setWaterPipeSize(Vector2f(20.0f, 275.0f));
+        pipe1.setWaterColor(Color::Green);
+        pipe1.setWaterLevel(0);
+
+        pipe2.setPipePosition(Vector2f(380.0f, 660.0f));
+        pipe2.setPipeSize(Vector2f(275.0f, 40.0f));
+        pipe2.setPipeColor(Color::Red);
+        pipe2.setWaterPipePosition(Vector2f(390.0f, 670.0f));
+        pipe2.setWaterPipeSize(Vector2f(265.0f, 20.0f));
+        pipe2.setWaterColor(Color::Black);
+        pipe2.setWaterLevel(0);
+
+        pipe3.setPipePosition(Vector2f(580.0f, 345.0f));
+        pipe3.setPipeSize(Vector2f(40.0f, 150.0f));
+        pipe3.setPipeColor(Color::Red);
+        pipe3.setWaterPipePosition(Vector2f(590.0f, 345.0f));
+        pipe3.setWaterPipeSize(Vector2f(20.0f, 160.0f));
+        pipe3.setWaterColor(Color::Black);
+        pipe3.setWaterLevel(0);
+
+        pipe4.setPipePosition(Vector2f(830.0f, 345.0f));
+        pipe4.setPipeSize(Vector2f(40.0f, 150.0f));
+        pipe4.setPipeColor(Color::Red);
+        pipe4.setWaterPipePosition(Vector2f(840.0f, 345.0f));
+        pipe4.setWaterPipeSize(Vector2f(20.0f, 160.0f));
+        pipe4.setWaterColor(Color::Black);
+        pipe4.setWaterLevel(0);
+
+        pipe5.setPipePosition(Vector2f(580.0f, 495.0f));
+        pipe5.setPipeSize(Vector2f(290.0f, 40.0f));
+        pipe5.setPipeColor(Color::Red);
+        pipe5.setWaterPipePosition(Vector2f(590.0f, 505.0f));
+        pipe5.setWaterPipeSize(Vector2f(270.0f, 20.0f));
+        pipe5.setWaterColor(Color::Black);
+        pipe5.setWaterLevel(0);
+
+        pipe6.setPipePosition(Vector2f(705.0f, 535.0f));
+        pipe6.setPipeSize(Vector2f(40.0f, 120.0f));
+        pipe6.setPipeColor(Color::Red);
+        pipe6.setWaterPipePosition(Vector2f(715.0f, 525.0f));
+        pipe6.setWaterPipeSize(Vector2f(20.0f, 130.0f));
+        pipe6.setWaterColor(Color::Black);
+        pipe6.setWaterLevel(0);
+
+        pipe7.setPipePosition(Vector2f(1080.0f, 295.0f));
+        pipe7.setPipeSize(Vector2f(40.0f, 360.0f));
+        pipe7.setPipeColor(Color::Red);
+        pipe7.setWaterPipePosition(Vector2f(1090.0f, 295.0f));
+        pipe7.setWaterPipeSize(Vector2f(20.0f, 360.0f));
+        pipe7.setWaterColor(Color::Black);
+        pipe7.setWaterLevel(0);
+
+        // create a pump
+
+        pump1.setPosition(Vector2f(605.0f, 600.0f));
+        pump1.setSize(Vector2f(100.0f, 100.0f));
+
+        pump2.setPosition(Vector2f(600.0f, 400.0f));
+        pump2.setSize(Vector2f(200.0f, 200.0f));
+
+        pump3.setPosition(Vector2f(800.0f, 400.0f));
+        pump3.setSize(Vector2f(200.0f, 200.0f));
+
+        // create a heat machine
+
+        HM1.setPosition(Vector2f(500.0f, 500.0f));
+        HM1.setSize(Vector2f(200.0f, 200.0f));
+
+        HM2.setPosition(Vector2f(600.0f, 500.0f));
+        HM2.setSize(Vector2f(200.0f, 200.0f));
+
+        HM3.setPosition(Vector2f(700.0f, 500.0f));
+        HM3.setSize(Vector2f(200.0f, 200.0f));
+        
+        // Other
 
         parameters.loadDataFromFileToSimulation(data_list, "resources/saved_params/params.txt");
+     
+        logParams(data_list);
         
-
-        for (int i = 0; i < 8; i++) {
-            cout << data_list[i] << " ";
-        }
-
-        cout << endl;
+        createTopStrip();
 
     }
 
@@ -437,7 +915,48 @@ private:
         }
     }
 
-    
+    void logParams(int list[8]) const
+    {
+        for (int i = 0; i < 8; i++) {
+            cout << data_list[i] << " ";
+        }
+
+        cout << endl;
+    }
+
+    void createTopStrip()
+    {
+
+        strip.setSize(Vector2f(window.getSize().x, 50.0f));
+        strip.setFillColor(Color::Black);  
+        strip.setPosition(0.0f, 0.0f);
+
+        TitleText.setFont(font);
+        TitleText.setCharacterSize(24);
+        TitleText.setFillColor(Color::White);
+        TitleText.setPosition(((window.getSize().x)/2)-75.0f, 10.0f);
+        TitleText.setString("Symulacja");
+
+        backButton.setFont(font);
+        backButton.setCharacterSize(24);
+        backButton.setString("cofnij");
+        backButton.setPosition(1180.0, 10.0);
+
+        simulationStatus.setFont(font);
+        simulationStatus.setCharacterSize(24);
+        simulationStatus.setString("Status symulacji Run/Stop");
+        simulationStatus.setPosition(10.0, 10.0);
+
+    }
+
+    void drawTopStrip()
+    {
+        window.draw(strip);
+        window.draw(simulationStatus);
+        window.draw(TitleText);
+        window.draw(backButton);
+    }
+
 
 };
 
@@ -445,7 +964,8 @@ class Options {
 public:
     Options(RenderWindow& window)
         : window(window), 
-        parameters(Vector2f(10.0f, 10.0f), window)
+        parameters(Vector2f(10.0f, 10.0f), window),
+        exitPopup(Vector2f(440.0f, 260.0f))
 
     {
         loadDataFromFile("resources/saved_params/params.txt");
@@ -462,24 +982,35 @@ public:
             window.draw(backgroundSprite);
             window.draw(backgroundRect);
 
-            
-            waterLevelInput1.setString("Test");
-            temperatureInput1.setString("Test2");
-            waterLevelInput2.setString("Test2");
-            temperatureInput2.setString("Tes3t");
-            waterLevelInput3.setString("Test4");
-            temperatureInput3.setString("Te5st");
-            waterLevelInput4.setString("Test6");
-            temperatureInput4.setString("Te7st");
+            const array<string, 8> fixedLabels = {
+            "Poziom wody 1:",
+            "Temperatura wody 1:",
+            "Poziom wody 2:",
+            "Temperatura wody 2:",
+            "Poziom wody 3:",
+            "Temperatura wody 3:",
+            "Poziom wody 4:",
+            "Temperatura wody 4:"
+            };
 
-            waterLevelInput1.setPosition(Vector2f(100.0f, 100.0f));
-            temperatureInput1.setPosition(Vector2f(100.0f, 140.0f));
-            waterLevelInput2.setPosition(Vector2f(100.0f, 180.0f));
-            temperatureInput2.setPosition(Vector2f(100.0f, 220.0f));
-            waterLevelInput3.setPosition(Vector2f(100.0f, 260.0f));
-            temperatureInput3.setPosition(Vector2f(100.0f, 300.0f));
-            waterLevelInput4.setPosition(Vector2f(100.0f, 340.0f));
-            temperatureInput4.setPosition(Vector2f(100.0f, 380.0f));
+
+            waterLevelInput1.setString(fixedLabels[0]);
+            temperatureInput1.setString(fixedLabels[1]);
+            waterLevelInput2.setString(fixedLabels[2]);
+            temperatureInput2.setString(fixedLabels[3]);
+            waterLevelInput3.setString(fixedLabels[4]);
+            temperatureInput3.setString(fixedLabels[5]);
+            waterLevelInput4.setString(fixedLabels[6]);
+            temperatureInput4.setString(fixedLabels[7]);
+
+            waterLevelInput1.setPosition(Vector2f(100.0f, 150.0f));
+            temperatureInput1.setPosition(Vector2f(100.0f, 190.0f));
+            waterLevelInput2.setPosition(Vector2f(100.0f, 230.0f));
+            temperatureInput2.setPosition(Vector2f(100.0f, 270.0f));
+            waterLevelInput3.setPosition(Vector2f(100.0f, 310.0f));
+            temperatureInput3.setPosition(Vector2f(100.0f, 350.0f));
+            waterLevelInput4.setPosition(Vector2f(100.0f, 390.0f));
+            temperatureInput4.setPosition(Vector2f(100.0f, 430.0f));
 
 
             waterLevelInput1.draw(window);
@@ -502,9 +1033,8 @@ public:
         }
     }
 
-    void loadDataFromFile(const std::string& filePath) {
-        // Open the file for reading
-        std::ifstream inputFile(filePath);
+    void loadDataFromFile(const string& filePath) {
+        ifstream inputFile(filePath);
 
         if (inputFile.is_open()) {
             for (int i = 0; i < 8; ++i) {
@@ -537,6 +1067,8 @@ private:
     Sprite backgroundSprite;
     RectangleShape backgroundRect;
 
+    Popup exitPopup;
+
     array<int, 8> enteredValues; 
 
     int data_list[8] = { 0 };
@@ -561,7 +1093,10 @@ private:
         Event event;
         while (window.pollEvent(event)) {
             if (event.type == Event::Closed) {
-                window.close();
+                cout << "Przycisk close" << endl;
+                if (exitPopup.showYesNoPopup(window)) {
+                    window.close();
+                }
             }
             else if (event.type == Event::MouseButtonReleased) {
                 handleButtonClick(event);
@@ -668,7 +1203,8 @@ private:
 class Help {
 public:
     Help(RenderWindow& window)
-        : window(window) {
+        :   window(window),
+            exitPopup(Vector2f(440.0f, 260.0f)) {
         init();
     }
 
@@ -677,7 +1213,10 @@ public:
             Event event;
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) {
-                    window.close();
+                    cout << "Przycisk close" << endl;
+                    if (exitPopup.showYesNoPopup(window)) {
+                        window.close();
+                    }
                 }
                 else if (event.type == Event::MouseButtonReleased) {
                     handleButtonClick(event);
@@ -706,6 +1245,8 @@ private:
     RectangleShape backgroundRect;
     Text helpText;
     Text backButton;
+
+    Popup exitPopup;
 
     bool helpShouldClose = false;
 
@@ -755,7 +1296,7 @@ private:
 
 class Menu {
 public:
-    Menu(RenderWindow& window) : window(window) {
+    Menu(RenderWindow& window) : window(window), exitPopup(Vector2f(440.0f, 260.0f)) {
         init();
     }
 
@@ -764,7 +1305,11 @@ public:
             Event event;
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) {
-                    window.close();
+                    // Display the exit popup
+                    cout << "Przycisk close" << endl;
+                    if (exitPopup.showYesNoPopup(window)) {
+                        window.close();
+                    }
                 }
                 else if (event.type == Event::MouseButtonReleased) {
                     if (event.mouseButton.button == Mouse::Left) {
@@ -773,18 +1318,20 @@ public:
                         if (startButton.getGlobalBounds().contains(mousePos)) {
                             cout << "Przycisk start" << endl;
                             startSimulation();
-
                         }
                         else if (paramsButton.getGlobalBounds().contains(mousePos)) {
-                            cout << "Params" << endl;
+                            cout << "Przycisk Params" << endl;
                             startOptions();
                         }
                         else if (helpButton.getGlobalBounds().contains(mousePos)) {
-                            cout << "help" << endl;
+                            cout << "Przycisk Help" << endl;
                             startHelp();
                         }
                         else if (exitOption.getGlobalBounds().contains(mousePos)) {
-                            window.close();
+                            cout << "Przycisk wyjscie" << endl;
+                            if (exitPopup.showYesNoPopup(window)) {
+                                window.close();
+                            }
                         }
                     }
                 }
@@ -805,15 +1352,13 @@ public:
             else if (currentScreenState == ScreenState::Options) {
                 Options options(window);
                 options.run();
-                currentScreenState = ScreenState::Main;  // Powrot do menu
+                currentScreenState = ScreenState::Main;
             }
             else if (currentScreenState == ScreenState::Help) {
-                
+                // Handle the "Help" state
             }
         }
     }
-
-
 
 private:
     RenderWindow& window;
@@ -828,7 +1373,7 @@ private:
     Text helpButton;
     Text exitOption;
 
-    array<int, 8> enteredValues;
+    Popup exitPopup;
 
     enum class ScreenState {
         Main,
@@ -855,7 +1400,7 @@ private:
         window.clear();
         Help help(window);
         help.run();
-        
+
     }
 
 
@@ -916,32 +1461,27 @@ private:
 
 class AquaParkSimulator {
 public:
-    AquaParkSimulator(RenderWindow& window)
+    AquaParkSimulator(sf::RenderWindow& window)
         : window(window), menu(window), options(window), simulation(window) {
         init();
     }
 
     void run() {
         while (window.isOpen()) {
-            Event event;
-            while (window.pollEvent(event)) {
-                if (event.type == Event::Closed) {
-                    window.close();
-                }
-            }
+            
 
-            window.clear();
+            //window.clear();
 
             if (inMenuScreen) {
                 menu.run();
                 if (optionsShouldClose) {
-                    startOptions();
+                    //startOptions();
                     inMenuScreen = false;
                     optionsShouldClose = false;
                 }
             }
             else {
-                startSimulation();
+                //startSimulation();
             }
 
             window.display();
@@ -957,10 +1497,9 @@ private:
     bool inMenuScreen = true;
     bool optionsShouldClose = false;
 
-    std::array<int, 8> enteredValues;
+    void init()
+    {
 
-    void init() {
-        
     }
 
     void startSimulation() {
@@ -973,11 +1512,11 @@ private:
         options.run();
     }
 
-    void startHelp() {
-        window.clear();
-        
-    }
+    //void startHelp() {
+    //    window.clear();
+    //}
 };
+
 
 int main() {
     RenderWindow window(VideoMode(1280, 720), "AquaPark simulator");
