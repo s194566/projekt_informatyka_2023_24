@@ -37,15 +37,44 @@ zakres minimalny
 #include <iostream>
 #include <string>
 #include <SFML/Graphics.hpp>
-//#include <SFML/Window.hpp>
 #include <SFML/System/Clock.hpp>
-//#include <list>
 #include <array>
 #include <fstream>
 
 
 using namespace std;
 using namespace sf;
+
+
+class SimulationData {
+public:
+    SimulationData() {
+        init();
+    }
+
+    void updateSimulationStatus(bool status) {
+        simulationStatus.setFont(font);
+        simulationStatus.setCharacterSize(24);
+        simulationStatus.setPosition(240.0, 10.0);
+
+        if (status) {
+            simulationStatus.setString("Yes");
+            simulationStatus.setFillColor(Color::Green);
+        }
+        else {
+            simulationStatus.setString("No");
+            simulationStatus.setFillColor(Color::Red);
+        }
+    }
+
+private:
+    Font font;
+    Text simulationStatus;
+
+    void init() {
+        font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf");
+    }
+};
 
 class WaterPump {
 public:
@@ -97,8 +126,8 @@ public:
     }
 
 private:
-    sf::Texture texture; 
-    sf::Sprite sprite;   
+    Texture texture; 
+    Sprite sprite;   
 
     void init() {
         if (!texture.loadFromFile("resources/Images/heating-machine.png")) {
@@ -238,7 +267,7 @@ public:
         // Update
         float waterHeight = size.y * waterLevel;
         float waterPositionY = position.y + size.y - waterHeight;
-        waterShape.setSize(sf::Vector2f(size.x - 10.0f, waterHeight - 0.0f));
+        waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 0.0f));
         waterShape.setPosition(position.x + 5.0f, waterPositionY - 5.0f);
 
         return false;
@@ -477,29 +506,38 @@ public:
         init();
     }
 
-    void drawYesNo(RenderWindow& window) {
+    void drawYesNo(RenderWindow& window) 
+    {
         window.draw(backgroundRect);
         window.draw(messageText);
         window.draw(yesButtonSprite);
         window.draw(noButtonSprite);
     }
 
-    void drawRestart(RenderWindow& window) {
+    void drawRestart(RenderWindow& window) 
+    {
         window.draw(backgroundRect);
-        window.draw(messageText);
+        window.draw(RestartMessageText);
         window.draw(restartButtonSprite);
+    }
+
+    void drawHelpPopup(RenderWindow& window)
+    {
+        window.draw(backgroundRect);
+        window.draw(HelpMessageText);
+        window.draw(closeButtonSprite);
     }
 
     bool showYesNoPopup(RenderWindow& window) {
         while (window.isOpen()) {
-            sf::Event event;
+            Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) {
+                if (event.type == Event::Closed) {
                     window.close();
                 }
-                else if (event.type == sf::Event::MouseButtonReleased) {
-                    if (event.mouseButton.button == sf::Mouse::Left) {
-                        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+                else if (event.type == Event::MouseButtonReleased) {
+                    if (event.mouseButton.button == Mouse::Left) {
+                        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 
                         if (yesButtonSprite.getGlobalBounds().contains(mousePos)) {
                             return true;
@@ -518,21 +556,18 @@ public:
         return false; // Handle window closure
     }
 
-    bool showRestartPopup(sf::RenderWindow& window) {
+    bool showRestartPopup(RenderWindow& window) {
         while (window.isOpen()) {
-            sf::Event event;
+            Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) {
+                if (event.type == Event::Closed) {
                     window.close();
                 }
-                else if (event.type == sf::Event::MouseButtonReleased) {
-                    if (event.mouseButton.button == sf::Mouse::Left) {
-                        Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+                else if (event.type == Event::MouseButtonReleased) {
+                    if (event.mouseButton.button == Mouse::Left) {
+                        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 
-                        if (yesButtonSprite.getGlobalBounds().contains(mousePos)) {
-                            return true;
-                        }
-                        else if (noButtonSprite.getGlobalBounds().contains(mousePos)) {
+                        if (restartButtonSprite.getGlobalBounds().contains(mousePos)) {
                             return false;
                         }
                     }
@@ -546,6 +581,34 @@ public:
         return false;
     }
 
+    bool showHelpPopup(RenderWindow& window) {
+        while (window.isOpen()) {
+            Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == Event::Closed) {
+                    window.close();
+                }
+                else if (event.type == Event::MouseButtonReleased) {
+                    if (event.mouseButton.button == Mouse::Left) {
+                        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+
+                        if (closeButtonSprite.getGlobalBounds().contains(mousePos)) {
+                            return true;
+                        }
+                        else if (closeButtonSprite.getGlobalBounds().contains(mousePos)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            drawHelpPopup(window);
+            window.display();
+        }
+
+        return false;
+    }
+
 private:
     Font font;
     Vector2f position;
@@ -553,9 +616,12 @@ private:
     float waterLevel;
     RectangleShape backgroundRect;
     Text messageText;
+    Text RestartMessageText;
+    Text HelpMessageText;
     Sprite yesButtonSprite;
     Sprite noButtonSprite;
     Sprite restartButtonSprite;
+    Sprite closeButtonSprite;
     Texture yesTexture;
     Texture noTexture;
     Texture restartTexture;
@@ -574,10 +640,22 @@ private:
         messageText.setCharacterSize(24); 
         messageText.setFillColor(Color::Black);
 
+        RestartMessageText.setString("Do you want to restart?");
+        RestartMessageText.setFont(font);
+        RestartMessageText.setCharacterSize(24);
+        RestartMessageText.setFillColor(Color::Black);
+
+        HelpMessageText.setString("Aby otrzymac pomoc\n zobacz menu->help");
+        HelpMessageText.setFont(font);
+        HelpMessageText.setCharacterSize(24);
+        HelpMessageText.setFillColor(Color::Black);
+
         
         float textPosX = position.x + (size.x - messageText.getGlobalBounds().width) / 2;
         float textPosY = position.y + ((size.y - messageText.getGlobalBounds().height) / 2) - 50.0f;
         messageText.setPosition(textPosX, textPosY);
+        RestartMessageText.setPosition(textPosX, textPosY);
+        HelpMessageText.setPosition(textPosX, textPosY);
 
         
         if (!yesTexture.loadFromFile("resources/Images/yes-button.png") ||
@@ -599,6 +677,10 @@ private:
         restartButtonSprite.setTexture(restartTexture);
         restartButtonSprite.setPosition(position.x + 150.0f, position.y + size.y - 100.0f);
         restartButtonSprite.setScale(100.0f / yesButtonSprite.getLocalBounds().width, 100.0f / yesButtonSprite.getLocalBounds().height);
+
+        closeButtonSprite.setTexture(noTexture);
+        closeButtonSprite.setPosition(position.x + 350.0f, position.y + size.y - 200.0f);
+        closeButtonSprite.setScale(50.0f / noButtonSprite.getLocalBounds().width, 50.0f / noButtonSprite.getLocalBounds().height);
     }
 };
 
@@ -608,26 +690,30 @@ public:
         : window(window),
         parameters(Vector2f(10.0f, 60.0f), window),
         exitPopup(Vector2f(440.0f, 260.0f)),
-        SimulationEndPopup(Vector2f(440.0f, 260.0f))
+        SimulationEndPopup(Vector2f(440.0f, 260.0f)),
+        HelpPopup(Vector2f(440.0f, 260.0f))
     {
         init();
     }
 
     void run() {
         while (window.isOpen()) {
-            sf::Event event;
+            Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) {
+                if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     cout << "Przycisk close" << endl;
                     if (exitPopup.showYesNoPopup(window)) {
                         window.close();
                     }
                 }
-                else if (event.type == sf::Event::MouseButtonReleased) {
+                else if (event.type == Event::MouseButtonReleased) {
                     handleButtonClick(event);
                 }
+                if (event.type == Event::KeyPressed && event.key.code == Keyboard::F1) {
+                    cout << "Popup Help" << endl;
+                    HelpPopup.showHelpPopup(window);
+                }
             }
-            
 
             Clock clock;
             float elapsedTime = clock.restart().asSeconds();
@@ -691,13 +777,16 @@ public:
                 cout << "All animations completed!" << endl;
                 SimulationEndPopup.showRestartPopup(window);
                 break;
+               
             }
-
-
 
             window.clear(backgroundColor);
 
+           
+
             drawTopStrip();
+
+            simulationData.updateSimulationStatus(simulationRunning);
 
             parameters.draw(data_list);
 
@@ -742,9 +831,14 @@ private:
     RenderWindow& window;
     Color backgroundColor;
     Font font;
+    Text simulationText;
     Text simulationStatus;
     Text TitleText;
     Text backButton;
+
+    bool simulationRunning = true;
+
+    SimulationData simulationData;
 
     Tank tank1;
     Tank tank2;
@@ -768,11 +862,12 @@ private:
     HeatingMachine HM2;
     HeatingMachine HM3;
 
-
+    Color pipeColor = Color(128, 128, 128);
     
 
     Popup exitPopup;
     Popup SimulationEndPopup;
+    Popup HelpPopup;
     
     Parameters parameters;
 
@@ -819,7 +914,7 @@ private:
 
         pipe1.setPipePosition(Vector2f(380.0f, 395.0f));
         pipe1.setPipeSize(Vector2f(40.0f, 265.0f));
-        pipe1.setPipeColor(Color::Red);
+        pipe1.setPipeColor(pipeColor);
         pipe1.setWaterPipePosition(Vector2f(390.0f, 395.0f));
         pipe1.setWaterPipeSize(Vector2f(20.0f, 275.0f));
         pipe1.setWaterColor(Color::Green);
@@ -827,7 +922,7 @@ private:
 
         pipe2.setPipePosition(Vector2f(380.0f, 660.0f));
         pipe2.setPipeSize(Vector2f(275.0f, 40.0f));
-        pipe2.setPipeColor(Color::Red);
+        pipe2.setPipeColor(pipeColor);
         pipe2.setWaterPipePosition(Vector2f(390.0f, 670.0f));
         pipe2.setWaterPipeSize(Vector2f(265.0f, 20.0f));
         pipe2.setWaterColor(Color::Black);
@@ -835,7 +930,7 @@ private:
 
         pipe3.setPipePosition(Vector2f(580.0f, 345.0f));
         pipe3.setPipeSize(Vector2f(40.0f, 150.0f));
-        pipe3.setPipeColor(Color::Red);
+        pipe3.setPipeColor(pipeColor);
         pipe3.setWaterPipePosition(Vector2f(590.0f, 345.0f));
         pipe3.setWaterPipeSize(Vector2f(20.0f, 160.0f));
         pipe3.setWaterColor(Color::Black);
@@ -843,7 +938,7 @@ private:
 
         pipe4.setPipePosition(Vector2f(830.0f, 345.0f));
         pipe4.setPipeSize(Vector2f(40.0f, 150.0f));
-        pipe4.setPipeColor(Color::Red);
+        pipe4.setPipeColor(pipeColor);
         pipe4.setWaterPipePosition(Vector2f(840.0f, 345.0f));
         pipe4.setWaterPipeSize(Vector2f(20.0f, 160.0f));
         pipe4.setWaterColor(Color::Black);
@@ -851,7 +946,7 @@ private:
 
         pipe5.setPipePosition(Vector2f(580.0f, 495.0f));
         pipe5.setPipeSize(Vector2f(290.0f, 40.0f));
-        pipe5.setPipeColor(Color::Red);
+        pipe5.setPipeColor(pipeColor);
         pipe5.setWaterPipePosition(Vector2f(590.0f, 505.0f));
         pipe5.setWaterPipeSize(Vector2f(270.0f, 20.0f));
         pipe5.setWaterColor(Color::Black);
@@ -859,7 +954,7 @@ private:
 
         pipe6.setPipePosition(Vector2f(705.0f, 535.0f));
         pipe6.setPipeSize(Vector2f(40.0f, 120.0f));
-        pipe6.setPipeColor(Color::Red);
+        pipe6.setPipeColor(pipeColor);
         pipe6.setWaterPipePosition(Vector2f(715.0f, 525.0f));
         pipe6.setWaterPipeSize(Vector2f(20.0f, 130.0f));
         pipe6.setWaterColor(Color::Black);
@@ -867,7 +962,7 @@ private:
 
         pipe7.setPipePosition(Vector2f(1080.0f, 295.0f));
         pipe7.setPipeSize(Vector2f(40.0f, 360.0f));
-        pipe7.setPipeColor(Color::Red);
+        pipe7.setPipeColor(pipeColor);
         pipe7.setWaterPipePosition(Vector2f(1090.0f, 295.0f));
         pipe7.setWaterPipeSize(Vector2f(20.0f, 360.0f));
         pipe7.setWaterColor(Color::Black);
@@ -942,22 +1037,42 @@ private:
         backButton.setString("cofnij");
         backButton.setPosition(1180.0, 10.0);
 
-        simulationStatus.setFont(font);
-        simulationStatus.setCharacterSize(24);
-        simulationStatus.setString("Status symulacji Run/Stop");
-        simulationStatus.setPosition(10.0, 10.0);
+        simulationText.setFont(font);
+        simulationText.setCharacterSize(24);
+        simulationText.setString("Status symulacji:");
+        simulationText.setPosition(10.0, 10.0);
+
+        
 
     }
 
     void drawTopStrip()
     {
         window.draw(strip);
-        window.draw(simulationStatus);
+        window.draw(simulationText);
         window.draw(TitleText);
         window.draw(backButton);
     }
 
 
+    void resetSimulation()
+    {
+        bool animationPipe1Completed = false;
+        bool animationPipe2Completed = false;
+        bool animationPipe3Completed = false;
+        bool animationPipe4Completed = false;
+        bool animationPipe5Completed = false;
+        bool animationPipe6Completed = false;
+        bool animationPipe7Completed = false;
+
+        bool tankAnimation1Completed = false;
+        bool tankAnimation2Completed = false;
+        bool tankAnimation3Completed = false;
+        bool tankAnimation4Completed = false;
+    }
+
+    
+    
 };
 
 class Options {
@@ -1461,7 +1576,7 @@ private:
 
 class AquaParkSimulator {
 public:
-    AquaParkSimulator(sf::RenderWindow& window)
+    AquaParkSimulator(RenderWindow& window)
         : window(window), menu(window), options(window), simulation(window) {
         init();
     }
