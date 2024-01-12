@@ -27,7 +27,7 @@ zakres minimalny
 07. Popup czy na pewno chcesz wyjść
 08. Program zapisuje informacje o wartościach zadanych w pliku txt w folderze resources/saved_params/
 09. Struktury danych w kodzie gdzieś są.
-10.
+10. Przekazywanie wskaznika do pierwszego elementu tablicy do funkcji ... 
 11. Program wykorzystuje techniki programowania obiektowego.
 12. Graficzne menu
 
@@ -290,6 +290,26 @@ public:
         updateWaterPosition();
     }
 
+    void changeColor(const Color& newColor) {
+        tankShape.setFillColor(newColor);
+    }
+
+    void updateWaterColor(int temperature) {
+        // Adjust water color based on temperature
+        if (temperature <= 20) {
+            waterShape.setFillColor(Color::Blue);  // Cold temperature, blue color
+        }
+        else if (temperature <= 50) {
+            waterShape.setFillColor(Color(0, 128, 255));  // Moderate temperature, light blue color
+        }
+        else if (temperature <= 75) {
+            waterShape.setFillColor(Color(0, 128, 255));  // Moderate temperature, light blue color
+        }
+        else {
+            waterShape.setFillColor(Color::Red);  // Warm temperature, red color
+        }
+    }
+
 private:
     Vector2f position = { 0.0f, 0.0f };
     Vector2f size = { 100.0f, 100.0f };
@@ -316,6 +336,7 @@ private:
         waterShape.setSize(Vector2f(size.x - 10.0f, waterHeight - 0.0f));
         waterShape.setPosition(position.x + 5.0f, waterPositionY + 5.0f);
     }
+
 };
 
 class InputData {
@@ -324,19 +345,35 @@ public:
         init();
     }
 
-    void draw(RenderWindow& window) {
+    void draw(RenderWindow& window) const {
         window.draw(label);
         window.draw(valueText);
         window.draw(incrementButton);
+        window.draw(incrementPlus5Button);
+        window.draw(incrementPlus10Button);
         window.draw(decrementButton);
+        window.draw(decrementMinus5Button);
+        window.draw(decrementMinus10Button);
     }
 
     void handleButtonClick(const Vector2f& mousePos) {
         if (incrementButton.getGlobalBounds().contains(mousePos)) {
-            increaseValue();
+            increaseValue(1);
+        }
+        else if (incrementPlus5Button.getGlobalBounds().contains(mousePos)) {
+            increaseValue(5);
+        }
+        else if (incrementPlus10Button.getGlobalBounds().contains(mousePos)) {
+            increaseValue(10);
         }
         else if (decrementButton.getGlobalBounds().contains(mousePos)) {
-            decreaseValue();
+            decreaseValue(1);
+        }
+        else if (decrementMinus5Button.getGlobalBounds().contains(mousePos)) {
+            decreaseValue(5);
+        }
+        else if (decrementMinus10Button.getGlobalBounds().contains(mousePos)) {
+            decreaseValue(10);
         }
     }
 
@@ -359,7 +396,11 @@ public:
         label.setPosition(position.x, position.y);
         valueText.setPosition(position.x + 400, position.y);
         incrementButton.setPosition(position.x + 500, position.y);
-        decrementButton.setPosition(position.x + 600, position.y);
+        incrementPlus5Button.setPosition(position.x + 550, position.y);
+        incrementPlus10Button.setPosition(position.x + 650, position.y);
+        decrementButton.setPosition(position.x + 750, position.y);
+        decrementMinus5Button.setPosition(position.x + 850, position.y);
+        decrementMinus10Button.setPosition(position.x + 950, position.y);
     }
 
 private:
@@ -370,7 +411,11 @@ private:
     Text label;
     Text valueText;
     Text incrementButton;
+    Text incrementPlus5Button;
+    Text incrementPlus10Button;
     Text decrementButton;
+    Text decrementMinus5Button;
+    Text decrementMinus10Button;
 
     void init() {
         font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf");
@@ -390,19 +435,39 @@ private:
         incrementButton.setString("Up");
         incrementButton.setPosition(position.x + 500, position.y);
 
+        incrementPlus5Button.setFont(font);
+        incrementPlus5Button.setCharacterSize(20);
+        incrementPlus5Button.setString("Up +5");
+        incrementPlus5Button.setPosition(position.x + 550, position.y);
+
+        incrementPlus10Button.setFont(font);
+        incrementPlus10Button.setCharacterSize(20);
+        incrementPlus10Button.setString("Up + 10");
+        incrementPlus10Button.setPosition(position.x + 600, position.y);
+
         decrementButton.setFont(font);
         decrementButton.setCharacterSize(20);
         decrementButton.setString("Down");
-        decrementButton.setPosition(position.x + 600, position.y);
+        decrementButton.setPosition(position.x + 700, position.y);
+
+        decrementMinus5Button.setFont(font);
+        decrementMinus5Button.setCharacterSize(20);
+        decrementMinus5Button.setString("Down - 5");
+        decrementMinus5Button.setPosition(position.x + 750, position.y);
+
+        decrementMinus10Button.setFont(font);
+        decrementMinus10Button.setCharacterSize(20);
+        decrementMinus10Button.setString("Down - 10");
+        decrementMinus10Button.setPosition(position.x + 850, position.y);
     }
 
-    void increaseValue() {
-        value++;
+    void increaseValue(int number) {
+        value = value + number;
         updateValueText();
     }
 
-    void decreaseValue() {
-        value--;
+    void decreaseValue(int number) {
+        value = value - number;
         updateValueText();
     }
 
@@ -506,26 +571,30 @@ public:
         init();
     }
 
-    void drawYesNo(RenderWindow& window) 
-    {
-        window.draw(backgroundRect);
-        window.draw(messageText);
-        window.draw(yesButtonSprite);
-        window.draw(noButtonSprite);
-    }
+    bool showErrorPopup(RenderWindow& window, const string& errorMessage, int tryb) {
+        Clock clock;
+        while (clock.getElapsedTime().asSeconds() < 5.0f) {
+            Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == Event::Closed) {
+                    window.close();
+                }
+                else if (event.type == Event::MouseButtonReleased) {
+                    if (event.mouseButton.button == Mouse::Left) {
+                        Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 
-    void drawRestart(RenderWindow& window) 
-    {
-        window.draw(backgroundRect);
-        window.draw(RestartMessageText);
-        window.draw(restartButtonSprite);
-    }
+                        if (closeButtonSprite.getGlobalBounds().contains(mousePos)) {
+                            return true;
+                        }
+                    }
+                }
+            }
 
-    void drawHelpPopup(RenderWindow& window)
-    {
-        window.draw(backgroundRect);
-        window.draw(HelpMessageText);
-        window.draw(closeButtonSprite);
+            drawErrorPopup(window, errorMessage, tryb);
+            window.display();
+        }
+
+        return false;
     }
 
     bool showYesNoPopup(RenderWindow& window) {
@@ -615,6 +684,9 @@ private:
     Vector2f size;
     float waterLevel;
     RectangleShape backgroundRect;
+    RectangleShape errorBackgroundRect;
+    RectangleShape successBackgroundRect;
+    RectangleShape failBackgroundRect;
     Text messageText;
     Text RestartMessageText;
     Text HelpMessageText;
@@ -626,10 +698,65 @@ private:
     Texture noTexture;
     Texture restartTexture;
 
+    void drawYesNo(RenderWindow& window)
+    {
+        window.draw(backgroundRect);
+        window.draw(messageText);
+        window.draw(yesButtonSprite);
+        window.draw(noButtonSprite);
+    }
+
+    void drawRestart(RenderWindow& window)
+    {
+        window.draw(backgroundRect);
+        window.draw(RestartMessageText);
+        window.draw(restartButtonSprite);
+    }
+
+    void drawHelpPopup(RenderWindow& window)
+    {
+        window.draw(backgroundRect);
+        window.draw(HelpMessageText);
+        window.draw(closeButtonSprite);
+    }
+
+    void drawErrorPopup(RenderWindow& window, const string& customMessage, int tryb) {
+        messageText.setString(customMessage);
+        float textPosX = position.x + (size.x - messageText.getGlobalBounds().width) / 2;
+        float textPosY = position.y + ((size.y - messageText.getGlobalBounds().height) / 2) - 50.0f;
+        messageText.setPosition(textPosX, textPosY);
+
+        if (tryb == 1)
+        {
+            window.draw(successBackgroundRect);
+        }
+        else if (tryb == 2)
+        {
+            window.draw(errorBackgroundRect);
+        }
+        else {
+            window.draw(failBackgroundRect);
+        }
+        window.draw(messageText);
+        window.draw(closeButtonSprite);
+    }
+
     void init() {
         backgroundRect.setSize(size);
         backgroundRect.setFillColor(Color(255, 255, 255, 200));
         backgroundRect.setPosition(position);
+
+        errorBackgroundRect.setSize(size);
+        errorBackgroundRect.setFillColor(Color(255, 230, 0, 200));
+        errorBackgroundRect.setPosition(position);
+
+        successBackgroundRect.setSize(size);
+        successBackgroundRect.setFillColor(Color(0, 255, 0, 200));
+        successBackgroundRect.setPosition(position);
+
+        failBackgroundRect.setSize(size);
+        failBackgroundRect.setFillColor(Color(255, 200, 200, 200));
+        failBackgroundRect.setPosition(position);
 
         if (!font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf")) {
             cerr << "Error loading font." << endl;
@@ -732,6 +859,26 @@ public:
             bool tankAnimation3Completed = false;
             bool tankAnimation4Completed = false;
 
+            // set custom colors for water tanks
+
+            Color customColors[4] = {
+            Color(255, 0, 0),    // Red
+            Color(0, 255, 0),    // Green
+            Color(255, 0, 0),    // Red
+            Color(255, 255, 0)   // Yellow
+            };
+
+            tank1.changeColor(customColors[0]);
+            tank2.changeColor(customColors[1]);
+            tank3.changeColor(customColors[2]);
+            tank4.changeColor(customColors[3]);
+
+            tank1.updateWaterColor(data_list[1]);
+            tank2.updateWaterColor(data_list[3]);
+            tank3.updateWaterColor(data_list[5]);
+            tank4.updateWaterColor(data_list[7]);
+
+            // update water color base on temperature
 
             // Path 1
             if (!animationPipe2Completed) {
@@ -743,7 +890,7 @@ public:
             }
 
             if (animationPipe1Completed) {
-                tankAnimation1Completed = tank1.updateWaterAnimation(elapsedTime, data_list[6], 100);
+                tankAnimation1Completed = tank1.updateWaterAnimation(elapsedTime, data_list[0], 1000);
             }
 
             // Path 2
@@ -761,8 +908,8 @@ public:
             }
 
             if (animationPipe3Completed && animationPipe4Completed) {
-                tankAnimation2Completed = tank2.updateWaterAnimation(elapsedTime, data_list[6], 100);
-                tankAnimation3Completed = tank3.updateWaterAnimation(elapsedTime, data_list[6], 100);
+                tankAnimation2Completed = tank2.updateWaterAnimation(elapsedTime, data_list[2], 1000);
+                tankAnimation3Completed = tank3.updateWaterAnimation(elapsedTime, data_list[4], 1000);
             }
 
             // Path 3
@@ -917,7 +1064,7 @@ private:
         pipe1.setPipeColor(pipeColor);
         pipe1.setWaterPipePosition(Vector2f(390.0f, 395.0f));
         pipe1.setWaterPipeSize(Vector2f(20.0f, 275.0f));
-        pipe1.setWaterColor(Color::Green);
+        pipe1.setWaterColor(Color::Blue);
         pipe1.setWaterLevel(0);
 
         pipe2.setPipePosition(Vector2f(380.0f, 660.0f));
@@ -925,7 +1072,7 @@ private:
         pipe2.setPipeColor(pipeColor);
         pipe2.setWaterPipePosition(Vector2f(390.0f, 670.0f));
         pipe2.setWaterPipeSize(Vector2f(265.0f, 20.0f));
-        pipe2.setWaterColor(Color::Black);
+        pipe2.setWaterColor(Color::Blue);
         pipe2.setWaterLevel(0);
 
         pipe3.setPipePosition(Vector2f(580.0f, 345.0f));
@@ -933,7 +1080,7 @@ private:
         pipe3.setPipeColor(pipeColor);
         pipe3.setWaterPipePosition(Vector2f(590.0f, 345.0f));
         pipe3.setWaterPipeSize(Vector2f(20.0f, 160.0f));
-        pipe3.setWaterColor(Color::Black);
+        pipe3.setWaterColor(Color::Blue);
         pipe3.setWaterLevel(0);
 
         pipe4.setPipePosition(Vector2f(830.0f, 345.0f));
@@ -941,7 +1088,7 @@ private:
         pipe4.setPipeColor(pipeColor);
         pipe4.setWaterPipePosition(Vector2f(840.0f, 345.0f));
         pipe4.setWaterPipeSize(Vector2f(20.0f, 160.0f));
-        pipe4.setWaterColor(Color::Black);
+        pipe4.setWaterColor(Color::Blue);
         pipe4.setWaterLevel(0);
 
         pipe5.setPipePosition(Vector2f(580.0f, 495.0f));
@@ -949,7 +1096,7 @@ private:
         pipe5.setPipeColor(pipeColor);
         pipe5.setWaterPipePosition(Vector2f(590.0f, 505.0f));
         pipe5.setWaterPipeSize(Vector2f(270.0f, 20.0f));
-        pipe5.setWaterColor(Color::Black);
+        pipe5.setWaterColor(Color::Blue);
         pipe5.setWaterLevel(0);
 
         pipe6.setPipePosition(Vector2f(705.0f, 535.0f));
@@ -957,7 +1104,7 @@ private:
         pipe6.setPipeColor(pipeColor);
         pipe6.setWaterPipePosition(Vector2f(715.0f, 525.0f));
         pipe6.setWaterPipeSize(Vector2f(20.0f, 130.0f));
-        pipe6.setWaterColor(Color::Black);
+        pipe6.setWaterColor(Color::Blue);
         pipe6.setWaterLevel(0);
 
         pipe7.setPipePosition(Vector2f(1080.0f, 295.0f));
@@ -965,7 +1112,7 @@ private:
         pipe7.setPipeColor(pipeColor);
         pipe7.setWaterPipePosition(Vector2f(1090.0f, 295.0f));
         pipe7.setWaterPipeSize(Vector2f(20.0f, 360.0f));
-        pipe7.setWaterColor(Color::Black);
+        pipe7.setWaterColor(Color::Blue);
         pipe7.setWaterLevel(0);
 
         // create a pump
@@ -1054,25 +1201,6 @@ private:
         window.draw(backButton);
     }
 
-
-    void resetSimulation()
-    {
-        bool animationPipe1Completed = false;
-        bool animationPipe2Completed = false;
-        bool animationPipe3Completed = false;
-        bool animationPipe4Completed = false;
-        bool animationPipe5Completed = false;
-        bool animationPipe6Completed = false;
-        bool animationPipe7Completed = false;
-
-        bool tankAnimation1Completed = false;
-        bool tankAnimation2Completed = false;
-        bool tankAnimation3Completed = false;
-        bool tankAnimation4Completed = false;
-    }
-
-    
-    
 };
 
 class Options {
@@ -1080,7 +1208,8 @@ public:
     Options(RenderWindow& window)
         : window(window), 
         parameters(Vector2f(10.0f, 10.0f), window),
-        exitPopup(Vector2f(440.0f, 260.0f))
+        exitPopup(Vector2f(440.0f, 260.0f)),
+        errorPopup(Vector2f(850.0f,600.0f))
 
     {
         loadDataFromFile("resources/saved_params/params.txt");
@@ -1107,6 +1236,8 @@ public:
             "Poziom wody 4:",
             "Temperatura wody 4:"
             };
+
+
 
 
             waterLevelInput1.setString(fixedLabels[0]);
@@ -1184,6 +1315,8 @@ private:
 
     Popup exitPopup;
 
+    Popup errorPopup;
+
     array<int, 8> enteredValues; 
 
     int data_list[8] = { 0 };
@@ -1207,7 +1340,7 @@ private:
     void handleEvents() {
         Event event;
         while (window.pollEvent(event)) {
-            if (event.type == Event::Closed) {
+            if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                 cout << "Przycisk close" << endl;
                 if (exitPopup.showYesNoPopup(window)) {
                     window.close();
@@ -1218,8 +1351,6 @@ private:
             }
         }
     }
-
-    
 
     void handleButtonClick(const Event& event) {
         Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
@@ -1243,16 +1374,41 @@ private:
         enteredValues[7] = temperatureInput4.getValue();
 
         if (saveButton.getGlobalBounds().contains(mousePos)) {
+            if (checkParams(enteredValues))
             saveParams(enteredValues);
-            window.clear();
-            window.display();
-            optionsShouldClose = true;
         }
 
         if (backButton.getGlobalBounds().contains(mousePos)) {
             window.clear();
             window.display();
             optionsShouldClose = true;
+        }
+    }
+
+    bool checkParams(const array<int, 8>& values)
+    {
+        if (enteredValues[0] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 1 musi byc > 0", 3); // poziom wody
+        else if (enteredValues[1] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc > 0", 3); // temp wody
+        else if (enteredValues[2] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc > 0", 3); 
+        else if (enteredValues[3] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc > 0", 3);
+        else if (enteredValues[4] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc > 0", 3);
+        else if (enteredValues[5] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc > 0", 3);
+        else if (enteredValues[6] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc > 0", 3);
+        else if (enteredValues[7] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc > 0", 3);
+
+        else if (enteredValues[0] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 1 musi byc <= 100 procent", 3);
+        else if (enteredValues[1] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc < 50 stopni", 3);
+        else if (enteredValues[2] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc <= 100 procent", 3);
+        else if (enteredValues[3] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc < 50 stopni", 3);
+        else if (enteredValues[4] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc <= 100 procent", 3);
+        else if (enteredValues[5] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc < 50 stopni", 3);
+        else if (enteredValues[6] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc <= 100 procent", 3);
+        else if (enteredValues[7] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc < 50 stopni", 3);
+
+        else
+        {
+            errorPopup.showErrorPopup(window, "Wartosci zapisane", 1);
+            return true;
         }
     }
 
@@ -1327,7 +1483,7 @@ public:
         while (window.isOpen()) {
             Event event;
             while (window.pollEvent(event)) {
-                if (event.type == Event::Closed) {
+                if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     cout << "Przycisk close" << endl;
                     if (exitPopup.showYesNoPopup(window)) {
                         window.close();
@@ -1419,7 +1575,7 @@ public:
         while (window.isOpen()) {
             Event event;
             while (window.pollEvent(event)) {
-                if (event.type == Event::Closed) {
+                if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     // Display the exit popup
                     cout << "Przycisk close" << endl;
                     if (exitPopup.showYesNoPopup(window)) {
@@ -1452,26 +1608,16 @@ public:
                 }
             }
 
-            if (currentScreenState == ScreenState::Main) {
-                window.clear();
-                window.draw(backgroundSprite);
-                window.draw(backgroundRect);
-                window.draw(title);
-                window.draw(description);
-                window.draw(startButton);
-                window.draw(paramsButton);
-                window.draw(helpButton);
-                window.draw(exitOption);
-                window.display();
-            }
-            else if (currentScreenState == ScreenState::Options) {
-                Options options(window);
-                options.run();
-                currentScreenState = ScreenState::Main;
-            }
-            else if (currentScreenState == ScreenState::Help) {
-                // Handle the "Help" state
-            }
+            window.clear();
+            window.draw(backgroundSprite);
+            window.draw(backgroundRect);
+            window.draw(title);
+            window.draw(description);
+            window.draw(startButton);
+            window.draw(paramsButton);
+            window.draw(helpButton);
+            window.draw(exitOption);
+            window.display();
         }
     }
 
@@ -1489,14 +1635,6 @@ private:
     Text exitOption;
 
     Popup exitPopup;
-
-    enum class ScreenState {
-        Main,
-        Options,
-        Help
-    };
-
-    ScreenState currentScreenState;
 
 
     void startOptions() {
@@ -1578,27 +1716,12 @@ class AquaParkSimulator {
 public:
     AquaParkSimulator(RenderWindow& window)
         : window(window), menu(window), options(window), simulation(window) {
-        init();
+        //init();
     }
 
     void run() {
         while (window.isOpen()) {
-            
-
-            //window.clear();
-
-            if (inMenuScreen) {
-                menu.run();
-                if (optionsShouldClose) {
-                    //startOptions();
-                    inMenuScreen = false;
-                    optionsShouldClose = false;
-                }
-            }
-            else {
-                //startSimulation();
-            }
-
+            menu.run();
             window.display();
         }
     }
@@ -1609,27 +1732,10 @@ private:
     Options options;
     Simulation simulation;
 
-    bool inMenuScreen = true;
-    bool optionsShouldClose = false;
-
-    void init()
-    {
-
-    }
-
     void startSimulation() {
         window.clear();
         simulation.run();
     }
-
-    void startOptions() {
-        window.clear();
-        options.run();
-    }
-
-    //void startHelp() {
-    //    window.clear();
-    //}
 };
 
 
