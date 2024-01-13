@@ -26,7 +26,7 @@ zakres minimalny
 06. Kliknięcie close lub escape
 07. Popup czy na pewno chcesz wyjść
 08. Program zapisuje informacje o wartościach zadanych w pliku txt w folderze resources/saved_params/
-09. Struktury danych w kodzie gdzieś są.
+09. Wykorzystanie tablicy struktur do przechowywania koloru zbiornikow
 10. Przekazywanie wskaznika do pierwszego elementu tablicy do funkcji ... 
 11. Program wykorzystuje techniki programowania obiektowego.
 12. Graficzne menu
@@ -244,11 +244,13 @@ public:
     void draw(RenderWindow& window)
     {
         window.draw(tankShape);
+        window.draw(tankTopShape);
         window.draw(waterShape);
     }
 
     bool updateWaterAnimation(float elapsedTime, int targetPercentage, float waterSpeed) {
         
+
         float targetWaterLevel = static_cast<float>(targetPercentage) / 100.0f;
 
         float levelDifference = targetWaterLevel - waterLevel;
@@ -275,13 +277,16 @@ public:
 
     void setPosition(Vector2f newPosition) {
         position = newPosition;
+        topPosition = Vector2f(newPosition.x, newPosition.y - 5.0f);
         tankShape.setPosition(position);
+        tankTopShape.setPosition(topPosition);
         updateWaterPosition();
     }
 
     void setSize(Vector2f newSize) {
         size = newSize;
         tankShape.setSize(size);
+        tankTopShape.setSize(Vector2f(size.x, 5.0f));
         updateWaterPosition();
     }
 
@@ -292,35 +297,42 @@ public:
 
     void changeColor(const Color& newColor) {
         tankShape.setFillColor(newColor);
+        tankTopShape.setFillColor(newColor);
     }
 
     void updateWaterColor(int temperature) {
         // Adjust water color based on temperature
-        if (temperature <= 20) {
+        if (temperature <= 10) {
             waterShape.setFillColor(Color::Blue);  // Cold temperature, blue color
         }
-        else if (temperature <= 50) {
+        else if (temperature <= 25) {
             waterShape.setFillColor(Color(0, 128, 255));  // Moderate temperature, light blue color
         }
-        else if (temperature <= 75) {
-            waterShape.setFillColor(Color(0, 128, 255));  // Moderate temperature, light blue color
+        else if (temperature <= 40) {
+            waterShape.setFillColor(Color(153, 255, 255));  // Moderate temperature, light blue color
         }
         else {
-            waterShape.setFillColor(Color::Red);  // Warm temperature, red color
+            waterShape.setFillColor(Color(255, 153, 153));  // Warm temperature, red color
         }
     }
 
 private:
-    Vector2f position = { 0.0f, 0.0f };
+    Vector2f position = { 0.0f, 10.0f };
+    Vector2f topPosition = { 0.0f, 0.0f };
     Vector2f size = { 100.0f, 100.0f };
     float waterLevel = { 0.5f };
     RectangleShape tankShape;
+    RectangleShape tankTopShape;
     RectangleShape waterShape;
 
     void init() {
         tankShape.setSize(size);
         tankShape.setPosition(position);
         tankShape.setFillColor(Color::Green);
+
+        tankTopShape.setSize(Vector2f());
+        tankTopShape.setPosition(Vector2f());
+        tankTopShape.setFillColor(Color::Green);
 
         float waterHeight = size.y * waterLevel;
         float waterPositionY = position.y + size.y - waterHeight;
@@ -929,7 +941,7 @@ public:
 
             window.clear(backgroundColor);
 
-           
+
 
             drawTopStrip();
 
@@ -1716,7 +1728,6 @@ class AquaParkSimulator {
 public:
     AquaParkSimulator(RenderWindow& window)
         : window(window), menu(window), options(window), simulation(window) {
-        //init();
     }
 
     void run() {
