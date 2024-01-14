@@ -1,0 +1,8 @@
+"Poziom wody w basenie 1 musi byc <= 100 procent","Poziom wody w basenie 1 musi byc <= 100 procent"
+
+"Poziom wody w basenie 1 musi byc <= 100 procent","Poziom wody w basenie 2 musi byc <= 100 procent"
+"Predkosc pompy 3 musi byc > 0"
+
+
+
+

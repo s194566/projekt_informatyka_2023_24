@@ -19,15 +19,15 @@ zakres minimalny
 01. 4 zbiorniki (baseny)
     a) W symulacji napis symulacja aktywna / symulacja zakończona
     b) 3 rury z wodą o nieregularnym kształcie
-02. Stały element graficzny tło (zdjęcie basenów w menu głównym)
-03. Sterowanie pompy on/off przez myszkę
-04. Wybór sceneri kolory basenów.
-05. Po wciśnięcie F1 przechodzimy do strony HELP
+02. Stały element graficzny tło (zdjęcie basenów w menu głównym),  górny pasek w symulacji.
+03. sterowanie animacja dodania lub odjecia liczby w options. sterowanie za pomoca myszki.
+04. Wybór prędkości pompy oraz temperatury i wysokosci wody w basenie.
+05. Po wciśnięcie F1 wyskakuje popup help
 06. Kliknięcie close lub escape
 07. Popup czy na pewno chcesz wyjść
 08. Program zapisuje informacje o wartościach zadanych w pliku txt w folderze resources/saved_params/
-09. Wykorzystanie tablicy struktur do przechowywania danych sesji. Wykorzystanie abstrakcyjnego typu danych lista
-10. Przekazywanie wskaznika do pierwszego elementu tablicy do funkcji checkSimulationParams
+09. Wykorzystanie tablicy struktur do przechowywania informacji o pompie. Wykorzystanie abstrakcyjnego typu danych lista do zbierania informacji o bledach w klasie UserErrorRecorder.
+10. Przekazywanie wskaznika do pierwszego elementu tablicy struktur PumpInfo pumpsInfo[3] i uzycie -> aby dostac sie do zmiennych.
 11. Program wykorzystuje techniki programowania obiektowego.
 12. Graficzne menu
 
@@ -46,7 +46,47 @@ zakres minimalny
 using namespace std;
 using namespace sf;
 
+typedef struct {
+    int pumpSpeed;
+    string pumpName;
+} PumpInfo;
 
+class UserErrorRecorder {
+public:
+    void record(const string& error) {
+        errorList.push_back(error);
+    }
+
+    void save()
+    {
+        saveOnClose("resources/saved_params/ErrorRecorderLogs.txt");
+    }
+
+private:
+    list<string> errorList;
+
+    void saveOnClose(const string& filename) {
+        ofstream outFile(filename, ios::app);  // Open file in append mode
+
+        if (outFile.is_open()) {
+            for (auto it = errorList.begin(); it != errorList.end(); ++it) {
+                outFile << "\"" << *it << "\"";
+
+                if (next(it) != errorList.end()) {
+                    outFile << ",";
+                }
+            }
+
+            outFile << endl;
+
+            outFile.close();
+            cout << "Errors saved to file: " << filename << endl;
+        }
+        else {
+            cerr << "Unable to open file for saving errors." << endl;
+        }
+    }
+};
 
 class WaterPump {
 public:
@@ -551,11 +591,50 @@ public:
         }
     }
 
+    void addDataToStructure(PumpInfo* tankArray, int a, int b, int c) {
+
+        if (tankArray != nullptr) {
+            tankArray->pumpSpeed = a;
+            (*tankArray).pumpName = "Pump1";
+
+            (tankArray + 1)->pumpSpeed = b;
+            (tankArray + 1)->pumpName = "Pump2";
+
+            (tankArray + 2)->pumpSpeed = c;
+            (tankArray + 2)->pumpName = "Pump3";
+        }
+    }
+
+    void drawPumpInfo(const PumpInfo& pump, const Vector2f& pumpInfoBoxPosition) {
+        RectangleShape pumpInfoBox(Vector2f(170.0f, 80.0f)); // Adjust size as needed
+        pumpInfoBox.setFillColor(Color::Magenta); // You can change the color
+        pumpInfoBox.setPosition(pumpInfoBoxPosition);
+
+        Text pumpNameText;
+        pumpNameText.setFont(font);
+        pumpNameText.setCharacterSize(16);
+        pumpNameText.setPosition(pumpInfoBoxPosition.x + 10.0f, pumpInfoBoxPosition.y + 10.0f);
+        pumpNameText.setString(pump.pumpName);
+
+        Text pumpSpeedText;
+        pumpSpeedText.setFont(font);
+        pumpSpeedText.setCharacterSize(16);
+        pumpSpeedText.setPosition(pumpInfoBoxPosition.x + 10.0f, pumpInfoBoxPosition.y + 40.0f);
+        pumpSpeedText.setString("Pump Speed: " + to_string(pump.pumpSpeed));
+
+        window.draw(pumpInfoBox);
+        window.draw(pumpNameText);
+        window.draw(pumpSpeedText);
+    }
+
+
+
 private:
     
     Vector2f position; 
     Font font;
     RenderWindow& window;
+
 
     const array<string, 11> fixedLabels = {
         "Poziom wody 1:",
@@ -608,6 +687,7 @@ public:
             Event event;
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) {
+                    session.save();
                     window.close();
                 }
                 else if (event.type == Event::MouseButtonReleased) {
@@ -633,6 +713,7 @@ public:
             Event event;
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) {
+                    session.save();
                     window.close();
                 }
                 else if (event.type == Event::MouseButtonReleased) {
@@ -661,6 +742,7 @@ public:
             Event event;
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) {
+                    session.save();
                     window.close();
                 }
                 else if (event.type == Event::MouseButtonReleased) {
@@ -686,6 +768,7 @@ public:
             Event event;
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) {
+                    session.save();
                     window.close();
                 }
                 else if (event.type == Event::MouseButtonReleased) {
@@ -729,6 +812,8 @@ private:
     Texture noTexture;
     Texture restartTexture;
 
+    UserErrorRecorder session;
+
     void drawYesNo(RenderWindow& window)
     {
         window.draw(backgroundRect);
@@ -753,6 +838,7 @@ private:
 
     void drawErrorPopup(RenderWindow& window, const string& customMessage, int tryb) {
         messageText.setString(customMessage);
+        messageText.setCharacterSize(14);
         float textPosX = position.x + (size.x - messageText.getGlobalBounds().width) / 2;
         float textPosY = position.y + ((size.y - messageText.getGlobalBounds().height) / 2) - 50.0f;
         messageText.setPosition(textPosX, textPosY);
@@ -793,12 +879,12 @@ private:
             cerr << "Error loading font." << endl;
         }
 
-        messageText.setString("Do you want to leave?");
+        messageText.setString("Chcesz wyjsc?");
         messageText.setFont(font);
         messageText.setCharacterSize(24); 
         messageText.setFillColor(Color::Black);
 
-        RestartMessageText.setString("Do you want to restart?");
+        RestartMessageText.setString("Wyjdz do menu");
         RestartMessageText.setFont(font);
         RestartMessageText.setCharacterSize(24);
         RestartMessageText.setFillColor(Color::Black);
@@ -813,7 +899,7 @@ private:
         float textPosY = position.y + ((size.y - messageText.getGlobalBounds().height) / 2) - 50.0f;
         messageText.setPosition(textPosX, textPosY);
         RestartMessageText.setPosition(textPosX, textPosY);
-        HelpMessageText.setPosition(textPosX, textPosY);
+        HelpMessageText.setPosition(textPosX - 45.0f, textPosY);
 
         
         if (!yesTexture.loadFromFile("resources/Images/yes-button.png") ||
@@ -861,7 +947,7 @@ public:
                 if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     cout << "Przycisk close" << endl;
                     if (exitPopup.showYesNoPopup(window)) {
-                        //session.save();
+                        session.save();
                         window.close();
                     }
                 }
@@ -908,12 +994,13 @@ public:
 
             base.changeColor(customColors[4]);
 
+            // update water color base on temperature
+
             tank1.updateWaterColor(data_list[1]);
             tank2.updateWaterColor(data_list[3]);
             tank3.updateWaterColor(data_list[5]);
             tank4.updateWaterColor(data_list[7]);
 
-            // update water color base on temperature
 
             // Path 1
             if (!animationPipe2Completed) {
@@ -968,11 +1055,11 @@ public:
 
             drawTopStrip();
 
-            
+            //put parameters data into array
 
             parameters.draw(data_list);
 
-            //put parameters data into array
+            
 
             tank1.draw(window);
             tank2.draw(window);
@@ -1001,6 +1088,16 @@ public:
             HM3.draw(window);
             HM4.draw(window);
             
+
+            parameters.addDataToStructure(pumpsInfo, data_list[8], data_list[9], data_list[10]);
+
+            parameters.drawPumpInfo(*pumpsInfo, Vector2f(460.0f, 560.0f));
+
+            parameters.drawPumpInfo(*(pumpsInfo + 1), Vector2f(830.0f, 560.0f));
+
+            parameters.drawPumpInfo(*(pumpsInfo + 2), Vector2f(1125.0f, 520.0f));
+
+
 
             window.display();
 
@@ -1047,6 +1144,7 @@ private:
 
     Color pipeColor = Color(128, 128, 128);
     
+    PumpInfo pumpsInfo[3];
 
     Popup exitPopup;
     Popup SimulationEndPopup;
@@ -1060,7 +1158,7 @@ private:
 
     int data_list[11] = { 0 };
 
-
+    UserErrorRecorder session;
  
 
     void init() {
@@ -1231,7 +1329,7 @@ private:
 
         simulationText.setFont(font);
         simulationText.setCharacterSize(24);
-        simulationText.setString("Status symulacji:");
+        simulationText.setString("Dane:");
         simulationText.setPosition(10.0, 10.0);
 
         
@@ -1254,7 +1352,8 @@ public:
         : window(window), 
         parameters(Vector2f(10.0f, 10.0f), window),
         exitPopup(Vector2f(440.0f, 260.0f)),
-        errorPopup(Vector2f(850.0f,600.0f))
+        errorPopup(Vector2f(850.0f,600.0f)),
+        HelpPopup(Vector2f(440.0f, 260.0f))
 
     {
         loadDataFromFile("resources/saved_params/params.txt");
@@ -1380,9 +1479,11 @@ private:
 
     Popup errorPopup;
 
+    Popup HelpPopup;
+
     array<int, 11> enteredValues; 
 
-    int* enteredValuesPtr = enteredValues.data();
+    //int* enteredValuesPtr = enteredValues.data();
 
     int data_list[11] = { 0 };
 
@@ -1407,15 +1508,21 @@ private:
     int id = 0;
     bool optionsShouldClose = false;
 
+    UserErrorRecorder session;
+
     void handleEvents() {
         Event event;
         while (window.pollEvent(event)) {
             if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                 cout << "Przycisk close" << endl;
                 if (exitPopup.showYesNoPopup(window)) {
-                    //session.save();
+                    session.save();
                     window.close();
                 }
+            }
+            else if (event.type == Event::KeyPressed && event.key.code == Keyboard::F1) {
+                cout << "Popup Help" << endl;
+                HelpPopup.showHelpPopup(window);
             }
             else if (event.type == Event::MouseButtonReleased) {
                 handleButtonClick(event);
@@ -1467,23 +1574,101 @@ private:
 
     bool checkParams(const array<int, 11>& values)
     {
-        if (enteredValues[0] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 1 musi byc > 0", 3); // poziom wody
-        else if (enteredValues[1] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc > 0", 3); // temp wody
-        else if (enteredValues[2] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc > 0", 3); 
-        else if (enteredValues[3] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc > 0", 3);
-        //else if (enteredValues[4] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc > 0", 3);
-        else if (enteredValues[5] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc > 0", 3);
-        else if (enteredValues[6] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc > 0", 3);
-        else if (enteredValues[7] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc > 0", 3);
+        if (enteredValues[0] < 0) { // poziom wody
+            errorPopup.showErrorPopup(window, "Poziom wody w basenie 1 musi byc > 0", 3);
+            session.record("Poziom wody w basenie 1 musi byc > 0");
+        }
+        else if (enteredValues[1] < 0) {// temp wody
+            errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc > 0", 3);
+            session.record("Temperatura w basenie 1 musi byc > 0");
+        }
+        else if (enteredValues[2] < 0) {
+             errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc > 0", 3);
+             session.record("Poziom wody w basenie 2 musi byc > 0");
+        }
+        else if (enteredValues[3] < 0) {
+             errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc > 0", 3);
+             session.record("Temperatura w basenie 2 musi byc > 0");
+        }
 
-        else if (enteredValues[0] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 1 musi byc <= 100 procent", 3);
-        else if (enteredValues[1] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc < 50 stopni", 3);
-        else if (enteredValues[2] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc <= 100 procent", 3);
-        else if (enteredValues[3] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc < 50 stopni", 3);
+        //else if (enteredValues[4] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc > 0", 3);
+
+        else if (enteredValues[5] < 0) {
+             errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc > 0", 3);
+             session.record("Temperatura w basenie 3 musi byc > 0");
+        }
+        else if (enteredValues[6] < 0) {
+             errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc > 0", 3);
+             session.record("Poziom wody w basenie 4 musi byc > 0");
+        }
+        else if (enteredValues[7] < 0) {
+             errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc > 0", 3);
+             session.record("Temperatura w basenie 4 musi byc > 0");
+        }
+
+        else if (enteredValues[0] > 100) {
+             errorPopup.showErrorPopup(window, "Poziom wody w basenie 1 musi byc <= 100 procent", 3);
+             session.record("Poziom wody w basenie 1 musi byc <= 100 procent");
+        }
+        else if (enteredValues[1] > 50) {
+             errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc < 50 stopni", 3);
+             session.record("Temperatura w basenie 1 musi byc < 50 stopni");
+        }
+        else if (enteredValues[2] > 100) {
+             errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc <= 100 procent", 3);
+             session.record("Poziom wody w basenie 2 musi byc <= 100 procent");
+        }
+        else if (enteredValues[3] > 50) {
+             errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc < 50 stopni", 3);
+             session.record("Temperatura w basenie 2 musi byc < 50 stopni");
+        }
+
         //else if (enteredValues[4] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc <= 100 procent", 3);
-        else if (enteredValues[5] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc < 50 stopni", 3);
-        else if (enteredValues[6] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc <= 100 procent", 3);
-        else if (enteredValues[7] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc < 50 stopni", 3);
+
+        else if (enteredValues[5] > 50) {
+             errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc < 50 stopni", 3);
+             session.record("Temperatura w basenie 3 musi byc < 50 stopni");
+        }
+        else if (enteredValues[6] > 100) {
+             errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc <= 100 procent", 3);
+             session.record("Poziom wody w basenie 4 musi byc <= 100 procent");
+        }
+        else if (enteredValues[7] > 50) {
+             errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc < 50 stopni", 3);
+             session.record("Temperatura w basenie 4 musi byc < 50 stopni");
+        }
+
+        else if (enteredValues[8] < 0)
+        {
+            errorPopup.showErrorPopup(window, "Predkosc pompy 1 musi byc > 0", 3);
+            session.record("Predkosc pompy 1 musi byc > 0");
+        }
+        else if (enteredValues[9] < 0)
+        {
+            errorPopup.showErrorPopup(window, "Predkosc pompy 2 musi byc > 0", 3);
+            session.record("Predkosc pompy 2 musi byc > 0");
+        }
+        else if (enteredValues[10] < 0)
+        {
+            errorPopup.showErrorPopup(window, "Predkosc pompy 3 musi byc > 0", 3);
+            session.record("Predkosc pompy 3 musi byc > 0");
+        }
+
+        else if (enteredValues[8] >= 9000)
+        {
+            errorPopup.showErrorPopup(window, "Predkosc pompy 1 musi byc < 9000", 3);
+            session.record("Predkosc pompy 1 musi byc < 9000");
+        }
+        else if (enteredValues[9] >= 9000)
+        {
+            errorPopup.showErrorPopup(window, "Predkosc pompy 2 musi byc < 9000", 3);
+            session.record("Predkosc pompy 2 musi byc < 9000");
+        }
+        else if (enteredValues[10] >= 9000)
+        {
+            errorPopup.showErrorPopup(window, "Predkosc pompy 3 musi byc < 9000", 3);
+            session.record("Predkosc pompy 3 musi byc < 9000");
+        }
 
         else
         {
@@ -1555,7 +1740,8 @@ class Help {
 public:
     Help(RenderWindow& window)
         :   window(window),
-            exitPopup(Vector2f(440.0f, 260.0f)) {
+            exitPopup(Vector2f(440.0f, 260.0f)),
+            HelpPopup(Vector2f(440.0f, 260.0f)) {
         init();
     }
 
@@ -1566,8 +1752,13 @@ public:
                 if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     cout << "Przycisk close" << endl;
                     if (exitPopup.showYesNoPopup(window)) {
+                        session.save();
                         window.close();
                     }
+                }
+                else if (event.type == Event::KeyPressed && event.key.code == Keyboard::F1) {
+                    cout << "Popup Help" << endl;
+                    HelpPopup.showHelpPopup(window);
                 }
                 else if (event.type == Event::MouseButtonReleased) {
                     handleButtonClick(event);
@@ -1598,7 +1789,9 @@ private:
     Text backButton;
 
     Popup exitPopup;
+    Popup HelpPopup;
 
+    UserErrorRecorder session;
 
     bool helpShouldClose = false;
 
@@ -1648,7 +1841,7 @@ private:
 
 class Menu {
 public:
-    Menu(RenderWindow& window) : window(window), exitPopup(Vector2f(440.0f, 260.0f)) {
+    Menu(RenderWindow& window) : window(window), exitPopup(Vector2f(440.0f, 260.0f)), HelpPopup(Vector2f(440.0f, 260.0f)) {
         init();
     }
 
@@ -1660,8 +1853,13 @@ public:
                     // Display the exit popup
                     cout << "Przycisk close" << endl;
                     if (exitPopup.showYesNoPopup(window)) {
+                        session.save();
                         window.close();
                     }
+                }
+                else if (event.type == Event::KeyPressed && event.key.code == Keyboard::F1) {
+                    cout << "Popup Help" << endl;
+                    HelpPopup.showHelpPopup(window);
                 }
                 else if (event.type == Event::MouseButtonReleased) {
                     if (event.mouseButton.button == Mouse::Left) {
@@ -1716,6 +1914,9 @@ private:
     Text exitOption;
 
     Popup exitPopup;
+    Popup HelpPopup;
+
+    UserErrorRecorder session;
 
 
     void startOptions() {
@@ -1820,5 +2021,6 @@ int main() {
     RenderWindow window(VideoMode(1280, 720), "AquaPark simulator");
     AquaParkSimulator aquaParkSim(window);
     aquaParkSim.run();
+
     return 0;
 }
