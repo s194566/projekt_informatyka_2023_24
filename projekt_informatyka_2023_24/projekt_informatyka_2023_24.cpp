@@ -26,8 +26,8 @@ zakres minimalny
 06. Kliknięcie close lub escape
 07. Popup czy na pewno chcesz wyjść
 08. Program zapisuje informacje o wartościach zadanych w pliku txt w folderze resources/saved_params/
-09. Wykorzystanie tablicy struktur do przechowywania koloru zbiornikow
-10. Przekazywanie wskaznika do pierwszego elementu tablicy do funkcji ... 
+09. Wykorzystanie tablicy struktur do przechowywania danych sesji. Wykorzystanie abstrakcyjnego typu danych lista
+10. Przekazywanie wskaznika do pierwszego elementu tablicy do funkcji checkSimulationParams
 11. Program wykorzystuje techniki programowania obiektowego.
 12. Graficzne menu
 
@@ -39,6 +39,7 @@ zakres minimalny
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Clock.hpp>
 #include <array>
+#include <list>
 #include <fstream>
 
 
@@ -46,35 +47,6 @@ using namespace std;
 using namespace sf;
 
 
-class SimulationData {
-public:
-    SimulationData() {
-        init();
-    }
-
-    void updateSimulationStatus(bool status) {
-        simulationStatus.setFont(font);
-        simulationStatus.setCharacterSize(24);
-        simulationStatus.setPosition(240.0, 10.0);
-
-        if (status) {
-            simulationStatus.setString("Yes");
-            simulationStatus.setFillColor(Color::Green);
-        }
-        else {
-            simulationStatus.setString("No");
-            simulationStatus.setFillColor(Color::Red);
-        }
-    }
-
-private:
-    Font font;
-    Text simulationStatus;
-
-    void init() {
-        font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf");
-    }
-};
 
 class WaterPump {
 public:
@@ -88,6 +60,10 @@ public:
 
     void setSize(const Vector2f& newSize) {
         sprite.setScale(newSize.x / texture.getSize().x, newSize.y / texture.getSize().y);
+    }
+
+    void setRotation(float degrees) {
+        sprite.setRotation(degrees);
     }
 
     void draw(RenderWindow& window) {
@@ -115,6 +91,10 @@ public:
 
     void setPosition(const Vector2f& newPosition) {
         sprite.setPosition(newPosition);
+    }
+
+    void setRotation(float degrees) {
+        sprite.setRotation(degrees);
     }
 
     void setSize(const Vector2f& newSize) {
@@ -368,6 +348,13 @@ public:
         window.draw(decrementMinus10Button);
     }
 
+    void draw2(RenderWindow& window) const {
+        window.draw(label);
+        window.draw(valueText);
+        window.draw(incrementPlus100Button);
+        window.draw(decrementMinus100Button);
+    }
+
     void handleButtonClick(const Vector2f& mousePos) {
         if (incrementButton.getGlobalBounds().contains(mousePos)) {
             increaseValue(1);
@@ -378,6 +365,9 @@ public:
         else if (incrementPlus10Button.getGlobalBounds().contains(mousePos)) {
             increaseValue(10);
         }
+        else if (incrementPlus100Button.getGlobalBounds().contains(mousePos)) {
+            increaseValue(100);
+        }
         else if (decrementButton.getGlobalBounds().contains(mousePos)) {
             decreaseValue(1);
         }
@@ -387,6 +377,10 @@ public:
         else if (decrementMinus10Button.getGlobalBounds().contains(mousePos)) {
             decreaseValue(10);
         }
+        else if (decrementMinus100Button.getGlobalBounds().contains(mousePos)) {
+            decreaseValue(100);
+        }
+        
     }
 
     int getValue() const {
@@ -415,6 +409,15 @@ public:
         decrementMinus10Button.setPosition(position.x + 950, position.y);
     }
 
+    void setPosition2(Vector2f newPosition) {
+        position = newPosition;
+        label.setPosition(position.x, position.y);
+        valueText.setPosition(position.x + 400, position.y);
+
+        incrementPlus100Button.setPosition(position.x + 500, position.y);
+        decrementMinus100Button.setPosition(position.x + 600, position.y);
+    }
+
 private:
     string labelText;
     int value;
@@ -428,6 +431,9 @@ private:
     Text decrementButton;
     Text decrementMinus5Button;
     Text decrementMinus10Button;
+
+    Text incrementPlus100Button;
+    Text decrementMinus100Button;
 
     void init() {
         font.loadFromFile("resources/Fonts/OpenSans-Bold.ttf");
@@ -457,6 +463,11 @@ private:
         incrementPlus10Button.setString("Up + 10");
         incrementPlus10Button.setPosition(position.x + 600, position.y);
 
+        incrementPlus100Button.setFont(font);
+        incrementPlus100Button.setCharacterSize(20);
+        incrementPlus100Button.setString("Up + 100");
+        incrementPlus100Button.setPosition(position.x + 500, position.y);
+
         decrementButton.setFont(font);
         decrementButton.setCharacterSize(20);
         decrementButton.setString("Down");
@@ -471,6 +482,11 @@ private:
         decrementMinus10Button.setCharacterSize(20);
         decrementMinus10Button.setString("Down - 10");
         decrementMinus10Button.setPosition(position.x + 850, position.y);
+
+        decrementMinus100Button.setFont(font);
+        decrementMinus100Button.setCharacterSize(20);
+        decrementMinus100Button.setString("Down - 100");
+        decrementMinus100Button.setPosition(position.x + 700, position.y);
     }
 
     void increaseValue(int number) {
@@ -507,7 +523,7 @@ public:
         ifstream fin(filename);
 
         if (fin.is_open()) {
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 11; i++) {
                 fin >> data[i];
             }
 
@@ -523,7 +539,7 @@ public:
         ifstream fin(filename);
 
         if (fin.is_open()) {
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 11; i++) {
                 fin >> data[i];
             }
 
@@ -541,7 +557,7 @@ private:
     Font font;
     RenderWindow& window;
 
-    const array<string, 8> fixedLabels = {
+    const array<string, 11> fixedLabels = {
         "Poziom wody 1:",
         "Temperatura wody 1:",
         "Poziom wody 2:",
@@ -549,7 +565,10 @@ private:
         "Poziom wody 3:",
         "Temperatura wody 3:",
         "Poziom wody 4:",
-        "Temperatura wody 4:"
+        "Temperatura wody 4:",
+        "Predkosc pompy 1:",
+        "Predkosc pompy 2:",
+         "Predkosc pompy 3:",
     };
 
     void init() {
@@ -842,6 +861,7 @@ public:
                 if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     cout << "Przycisk close" << endl;
                     if (exitPopup.showYesNoPopup(window)) {
+                        //session.save();
                         window.close();
                     }
                 }
@@ -873,17 +893,20 @@ public:
 
             // set custom colors for water tanks
 
-            Color customColors[4] = {
+            Color customColors[5] = {
             Color(255, 0, 0),    // Red
             Color(0, 255, 0),    // Green
             Color(255, 0, 0),    // Red
-            Color(255, 255, 0)   // Yellow
+            Color(255, 255, 0),  // Yellow
+            Color(128, 128, 128) // PipeColor
             };
 
             tank1.changeColor(customColors[0]);
             tank2.changeColor(customColors[1]);
             tank3.changeColor(customColors[2]);
             tank4.changeColor(customColors[3]);
+
+            base.changeColor(customColors[4]);
 
             tank1.updateWaterColor(data_list[1]);
             tank2.updateWaterColor(data_list[3]);
@@ -894,42 +917,42 @@ public:
 
             // Path 1
             if (!animationPipe2Completed) {
-                animationPipe2Completed = pipe2.updateWaterAnimation(elapsedTime, 3000);
+                animationPipe2Completed = pipe2.updateWaterAnimation(elapsedTime, data_list[8]);
             }
 
             if (animationPipe2Completed && !animationPipe1Completed) {
-                animationPipe1Completed = pipe1.updateWaterAnimation(elapsedTime, 3000);
+                animationPipe1Completed = pipe1.updateWaterAnimation(elapsedTime, data_list[8]);
             }
 
             if (animationPipe1Completed) {
-                tankAnimation1Completed = tank1.updateWaterAnimation(elapsedTime, data_list[0], 1000);
+                tankAnimation1Completed = tank1.updateWaterAnimation(elapsedTime, data_list[0], data_list[8]);
             }
 
             // Path 2
             if (!animationPipe6Completed) {
-                animationPipe6Completed = pipe6.updateWaterAnimation(elapsedTime, 3000);
+                animationPipe6Completed = pipe6.updateWaterAnimation(elapsedTime, data_list[9]);
             }
 
             if (animationPipe6Completed) {
-                animationPipe5Completed = pipe5.updateWaterAnimation(elapsedTime, 3000);
+                animationPipe5Completed = pipe5.updateWaterAnimation(elapsedTime, data_list[9]);
             }
 
             if (animationPipe5Completed) {
-                animationPipe3Completed = pipe3.updateWaterAnimation(elapsedTime, 3000);
-                animationPipe4Completed = pipe4.updateWaterAnimation(elapsedTime, 3000);
+                animationPipe3Completed = pipe3.updateWaterAnimation(elapsedTime, data_list[9]);
+                animationPipe4Completed = pipe4.updateWaterAnimation(elapsedTime, data_list[9]);
             }
 
             if (animationPipe3Completed && animationPipe4Completed) {
-                tankAnimation2Completed = tank2.updateWaterAnimation(elapsedTime, data_list[2], 1000);
-                tankAnimation3Completed = tank3.updateWaterAnimation(elapsedTime, data_list[4], 1000);
+                tankAnimation2Completed = tank2.updateWaterAnimation(elapsedTime, data_list[2], data_list[9]);
+                tankAnimation3Completed = tank3.updateWaterAnimation(elapsedTime, data_list[2], data_list[9]);
             }
 
             // Path 3
             if (!animationPipe7Completed) {
-                animationPipe7Completed = pipe7.updateWaterAnimation(elapsedTime, 3000);
+                animationPipe7Completed = pipe7.updateWaterAnimation(elapsedTime, data_list[10]);
             }
             if (animationPipe7Completed) {
-                tankAnimation4Completed = tank4.updateWaterAnimation(elapsedTime, data_list[6], 100);
+                tankAnimation4Completed = tank4.updateWaterAnimation(elapsedTime, data_list[6], data_list[10]);
             }
 
             if (tankAnimation1Completed && tankAnimation2Completed && tankAnimation3Completed && tankAnimation4Completed) {
@@ -945,7 +968,7 @@ public:
 
             drawTopStrip();
 
-            simulationData.updateSimulationStatus(simulationRunning);
+            
 
             parameters.draw(data_list);
 
@@ -970,12 +993,13 @@ public:
             pipe7.draw(window);
           
             pump1.draw(window);
-            //pump2.draw(window);
-            //pump3.draw(window);
+            pump2.draw(window);
+            pump3.draw(window);
 
-            //HM1.draw(window);
-            //HM2.draw(window);
-            //HM3.draw(window);
+            HM1.draw(window);
+            HM2.draw(window);
+            HM3.draw(window);
+            HM4.draw(window);
             
 
             window.display();
@@ -997,7 +1021,6 @@ private:
 
     bool simulationRunning = true;
 
-    SimulationData simulationData;
 
     Tank tank1;
     Tank tank2;
@@ -1020,6 +1043,7 @@ private:
     HeatingMachine HM1;
     HeatingMachine HM2;
     HeatingMachine HM3;
+    HeatingMachine HM4;
 
     Color pipeColor = Color(128, 128, 128);
     
@@ -1034,7 +1058,7 @@ private:
 
     bool simulationShouldClose = false;
 
-    int data_list[8] = { 0 };
+    int data_list[11] = { 0 };
 
 
  
@@ -1044,13 +1068,13 @@ private:
             cerr << "Error loading font" << endl;
         }
 
-        backgroundColor = Color(0, 0, 255);
+        backgroundColor = Color(30, 200, 220);
 
 
         // Create a Tank
 
         base.setPosition(Vector2f(650.0f, 650.0f));
-        base.setSize(Vector2f(600.0f, 60.0f));
+        base.setSize(Vector2f(600.0f, 100.0f));
         base.setWaterLevel(1);
         
         tank1.setPosition(Vector2f(350.0f, 150.0f));
@@ -1132,22 +1156,31 @@ private:
         pump1.setPosition(Vector2f(605.0f, 600.0f));
         pump1.setSize(Vector2f(100.0f, 100.0f));
 
-        pump2.setPosition(Vector2f(600.0f, 400.0f));
-        pump2.setSize(Vector2f(200.0f, 200.0f));
+        pump2.setPosition(Vector2f(805.0f, 590.0f));
+        pump2.setSize(Vector2f(100.0f, 100.0f));
+        pump2.setRotation(90.0);
 
-        pump3.setPosition(Vector2f(800.0f, 400.0f));
-        pump3.setSize(Vector2f(200.0f, 200.0f));
+        pump3.setPosition(Vector2f(1180.0f, 590.0f));
+        pump3.setSize(Vector2f(100.0f, 100.0f));
+        pump3.setRotation(90.0);
 
         // create a heat machine
 
-        HM1.setPosition(Vector2f(500.0f, 500.0f));
-        HM1.setSize(Vector2f(200.0f, 200.0f));
+        HM1.setPosition(Vector2f(500.0f, 350.0f));
+        HM1.setSize(Vector2f(100.0f, 100.0f));
+        HM1.setRotation(90.0);
 
-        HM2.setPosition(Vector2f(600.0f, 500.0f));
-        HM2.setSize(Vector2f(200.0f, 200.0f));
+        HM2.setPosition(Vector2f(700.0f, 300.0f));
+        HM2.setSize(Vector2f(100.0f, 100.0f));
+        HM2.setRotation(90.0);
 
-        HM3.setPosition(Vector2f(700.0f, 500.0f));
-        HM3.setSize(Vector2f(200.0f, 200.0f));
+        HM3.setPosition(Vector2f(950.0f, 300.0f));
+        HM3.setSize(Vector2f(100.0f, 100.0f));
+        HM3.setRotation(90.0);
+
+        HM4.setPosition(Vector2f(1190.0f, 250.0f));
+        HM4.setSize(Vector2f(100.0f, 100.0f));
+        HM4.setRotation(90.0);
         
         // Other
 
@@ -1171,7 +1204,7 @@ private:
 
     void logParams(int list[8]) const
     {
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 11; i++) {
             cout << data_list[i] << " ";
         }
 
@@ -1238,7 +1271,7 @@ public:
             window.draw(backgroundSprite);
             window.draw(backgroundRect);
 
-            const array<string, 8> fixedLabels = {
+            const array<string, 11> fixedLabels = {
             "Poziom wody 1:",
             "Temperatura wody 1:",
             "Poziom wody 2:",
@@ -1246,7 +1279,10 @@ public:
             "Poziom wody 3:",
             "Temperatura wody 3:",
             "Poziom wody 4:",
-            "Temperatura wody 4:"
+            "Temperatura wody 4:",
+            "Predkosc pompy 1:",
+            "Predkosc pompy 2:",
+            "Predkosc pompy 3:"
             };
 
 
@@ -1256,29 +1292,40 @@ public:
             temperatureInput1.setString(fixedLabels[1]);
             waterLevelInput2.setString(fixedLabels[2]);
             temperatureInput2.setString(fixedLabels[3]);
-            waterLevelInput3.setString(fixedLabels[4]);
+            //waterLevelInput3.setString(fixedLabels[4]);
             temperatureInput3.setString(fixedLabels[5]);
             waterLevelInput4.setString(fixedLabels[6]);
             temperatureInput4.setString(fixedLabels[7]);
 
+            pumpSpeed1.setString(fixedLabels[8]);
+            pumpSpeed2.setString(fixedLabels[9]);
+            pumpSpeed3.setString(fixedLabels[10]);
+
             waterLevelInput1.setPosition(Vector2f(100.0f, 150.0f));
             temperatureInput1.setPosition(Vector2f(100.0f, 190.0f));
-            waterLevelInput2.setPosition(Vector2f(100.0f, 230.0f));
-            temperatureInput2.setPosition(Vector2f(100.0f, 270.0f));
-            waterLevelInput3.setPosition(Vector2f(100.0f, 310.0f));
-            temperatureInput3.setPosition(Vector2f(100.0f, 350.0f));
-            waterLevelInput4.setPosition(Vector2f(100.0f, 390.0f));
-            temperatureInput4.setPosition(Vector2f(100.0f, 430.0f));
+            waterLevelInput2.setPosition(Vector2f(100.0f, 310.0f));
+            temperatureInput2.setPosition(Vector2f(100.0f, 350.0f));
+            //waterLevelInput3.setPosition(Vector2f(100.0f, 310.0f));
+            temperatureInput3.setPosition(Vector2f(100.0f, 390.0f));
+            waterLevelInput4.setPosition(Vector2f(100.0f, 470.0f));
+            temperatureInput4.setPosition(Vector2f(100.0f, 510.0f));
 
+            pumpSpeed1.setPosition2(Vector2f(100.0f, 590.0f));
+            pumpSpeed2.setPosition2(Vector2f(100.0f, 630.0f));
+            pumpSpeed3.setPosition2(Vector2f(100.0f, 670.0f));
 
             waterLevelInput1.draw(window);
             temperatureInput1.draw(window);
             waterLevelInput2.draw(window);
             temperatureInput2.draw(window);
-            waterLevelInput3.draw(window);
+            //waterLevelInput3.draw(window);
             temperatureInput3.draw(window);
             waterLevelInput4.draw(window);
             temperatureInput4.draw(window);
+
+            pumpSpeed1.draw2(window);
+            pumpSpeed2.draw2(window);
+            pumpSpeed3.draw2(window);
 
             window.draw(saveButton);
             window.draw(backButton);
@@ -1295,7 +1342,7 @@ public:
         ifstream inputFile(filePath);
 
         if (inputFile.is_open()) {
-            for (int i = 0; i < 8; ++i) {
+            for (int i = 0; i < 11; ++i) {
                 if (!(inputFile >> data_list[i])) {
                     cerr << "Error reading data from file: " << filePath << endl;
                     data_list[i] = 0;
@@ -1306,10 +1353,14 @@ public:
             temperatureInput1.setValue(data_list[1]);
             waterLevelInput2.setValue(data_list[2]);
             temperatureInput2.setValue(data_list[3]);
-            waterLevelInput3.setValue(data_list[4]);
+            //waterLevelInput3.setValue(data_list[4]);
             temperatureInput3.setValue(data_list[5]);
             waterLevelInput4.setValue(data_list[6]);
             temperatureInput4.setValue(data_list[7]);
+
+            pumpSpeed1.setValue(data_list[8]);
+            pumpSpeed2.setValue(data_list[9]);
+            pumpSpeed3.setValue(data_list[10]);
 
             inputFile.close();
         }
@@ -1329,9 +1380,12 @@ private:
 
     Popup errorPopup;
 
-    array<int, 8> enteredValues; 
+    array<int, 11> enteredValues; 
 
-    int data_list[8] = { 0 };
+    int* enteredValuesPtr = enteredValues.data();
+
+    int data_list[11] = { 0 };
+
     Parameters parameters;
 
     InputData waterLevelInput1;
@@ -1342,6 +1396,10 @@ private:
     InputData temperatureInput3;
     InputData waterLevelInput4;
     InputData temperatureInput4;
+
+    InputData pumpSpeed1;
+    InputData pumpSpeed2;
+    InputData pumpSpeed3;
 
     Text saveButton;
     Text backButton;
@@ -1355,6 +1413,7 @@ private:
             if (event.type == Event::Closed || event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                 cout << "Przycisk close" << endl;
                 if (exitPopup.showYesNoPopup(window)) {
+                    //session.save();
                     window.close();
                 }
             }
@@ -1371,23 +1430,32 @@ private:
         temperatureInput1.handleButtonClick(mousePos);
         waterLevelInput2.handleButtonClick(mousePos);
         temperatureInput2.handleButtonClick(mousePos);
-        waterLevelInput3.handleButtonClick(mousePos);
+        //waterLevelInput3.handleButtonClick(mousePos);
         temperatureInput3.handleButtonClick(mousePos);
         waterLevelInput4.handleButtonClick(mousePos);
         temperatureInput4.handleButtonClick(mousePos);
+
+        pumpSpeed1.handleButtonClick(mousePos);
+        pumpSpeed2.handleButtonClick(mousePos);
+        pumpSpeed3.handleButtonClick(mousePos);
 
         enteredValues[0] = waterLevelInput1.getValue();
         enteredValues[1] = temperatureInput1.getValue();
         enteredValues[2] = waterLevelInput2.getValue();
         enteredValues[3] = temperatureInput2.getValue();
-        enteredValues[4] = waterLevelInput3.getValue();
+        //enteredValues[4] = waterLevelInput3.getValue();
         enteredValues[5] = temperatureInput3.getValue();
         enteredValues[6] = waterLevelInput4.getValue();
         enteredValues[7] = temperatureInput4.getValue();
 
+        enteredValues[8] = pumpSpeed1.getValue();
+        enteredValues[9] = pumpSpeed2.getValue();
+        enteredValues[10] = pumpSpeed3.getValue();
+
         if (saveButton.getGlobalBounds().contains(mousePos)) {
             if (checkParams(enteredValues))
             saveParams(enteredValues);
+            //session.checkSimParams(enteredValuesPtr);
         }
 
         if (backButton.getGlobalBounds().contains(mousePos)) {
@@ -1397,13 +1465,13 @@ private:
         }
     }
 
-    bool checkParams(const array<int, 8>& values)
+    bool checkParams(const array<int, 11>& values)
     {
         if (enteredValues[0] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 1 musi byc > 0", 3); // poziom wody
         else if (enteredValues[1] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc > 0", 3); // temp wody
         else if (enteredValues[2] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc > 0", 3); 
         else if (enteredValues[3] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc > 0", 3);
-        else if (enteredValues[4] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc > 0", 3);
+        //else if (enteredValues[4] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc > 0", 3);
         else if (enteredValues[5] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc > 0", 3);
         else if (enteredValues[6] < 0) errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc > 0", 3);
         else if (enteredValues[7] < 0) errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc > 0", 3);
@@ -1412,7 +1480,7 @@ private:
         else if (enteredValues[1] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 1 musi byc < 50 stopni", 3);
         else if (enteredValues[2] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 2 musi byc <= 100 procent", 3);
         else if (enteredValues[3] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 2 musi byc < 50 stopni", 3);
-        else if (enteredValues[4] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc <= 100 procent", 3);
+        //else if (enteredValues[4] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 3 musi byc <= 100 procent", 3);
         else if (enteredValues[5] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 3 musi byc < 50 stopni", 3);
         else if (enteredValues[6] > 100) errorPopup.showErrorPopup(window, "Poziom wody w basenie 4 musi byc <= 100 procent", 3);
         else if (enteredValues[7] > 50) errorPopup.showErrorPopup(window, "Temperatura w basenie 4 musi byc < 50 stopni", 3);
@@ -1424,7 +1492,7 @@ private:
         }
     }
 
-    void saveParams(const array<int, 8>& values) {
+    void saveParams(const array<int, 11>& values) {
         cout << "Zapis dane:" << id << endl;
 
         // Drukowanie do konsoli
@@ -1530,6 +1598,7 @@ private:
     Text backButton;
 
     Popup exitPopup;
+
 
     bool helpShouldClose = false;
 
@@ -1743,17 +1812,13 @@ private:
     Options options;
     Simulation simulation;
 
-    void startSimulation() {
-        window.clear();
-        simulation.run();
-    }
 };
 
 
 int main() {
+    cout << "C++ Standard Version: " << __cplusplus << endl;
     RenderWindow window(VideoMode(1280, 720), "AquaPark simulator");
     AquaParkSimulator aquaParkSim(window);
     aquaParkSim.run();
-
     return 0;
 }
